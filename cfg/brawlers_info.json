@@ -1,0 +1,794 @@
+{
+    "shelly": {
+        "safe_range": 301.0,
+        "attack_range": 490.0,
+        "super_type": "damage",
+        "super_range": 490,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "colt": {
+        "safe_range": 324.0,
+        "attack_range": 546.0,
+        "super_type": "damage",
+        "super_range": 704,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "bull": {
+        "safe_range": 210.0,
+        "attack_range": 341.0,
+        "super_type": "charge",
+        "super_range": 704,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "brock": {
+        "safe_range": 354.0,
+        "attack_range": 576.0,
+        "super_type": "damage",
+        "super_range": 533,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "rico": {
+        "safe_range": 380.0,
+        "attack_range": 618.0,
+        "super_type": "damage",
+        "super_range": 853,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "spike": {
+        "safe_range": 301.0,
+        "attack_range": 490.0,
+        "super_type": "damage",
+        "super_range": 490,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "barley": {
+        "safe_range": 288.0,
+        "attack_range": 469.0,
+        "super_type": "damage",
+        "super_range": 597,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true
+    },
+    "jessie": {
+        "safe_range": 354.0,
+        "attack_range": 576.0,
+        "super_type": "spawnable",
+        "super_range": 320,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "nita": {
+        "safe_range": 236.0,
+        "attack_range": 384.0,
+        "super_type": "spawnable",
+        "super_range": 320,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "dynamike": {
+        "safe_range": 288.0,
+        "attack_range": 469.0,
+        "super_type": "damage",
+        "super_range": 469,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": false
+    },
+    "elprimo": {
+        "safe_range": 0.0,
+        "attack_range": 192.0,
+        "super_type": "charge",
+        "super_range": 576,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "mortis": {
+        "safe_range": 0.0,
+        "attack_range": 170.0,
+        "super_type": "damage",
+        "super_range": 640,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "crow": {
+        "safe_range": 341.0,
+        "attack_range": 554.0,
+        "super_type": "charge",
+        "super_range": 554,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "poco": {
+        "safe_range": 275.0,
+        "attack_range": 448.0,
+        "super_type": "other",
+        "super_range": 597,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "bo": {
+        "safe_range": 341.0,
+        "attack_range": 554.0,
+        "super_type": "spawnable",
+        "super_range": 554,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "piper": {
+        "safe_range": 393.0,
+        "attack_range": 640.0,
+        "super_type": "charge",
+        "super_range": 554,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "pam": {
+        "safe_range": 354.0,
+        "attack_range": 576.0,
+        "super_type": "spawnable",
+        "super_range": 320,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "tara": {
+        "safe_range": 315.0,
+        "attack_range": 512.0,
+        "super_type": "damage",
+        "super_range": 426,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "darryl": {
+        "safe_range": 236.0,
+        "attack_range": 384.0,
+        "super_type": "charge",
+        "super_range": 448,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "penny": {
+        "safe_range": 315.0,
+        "attack_range": 512.0,
+        "super_type": "spawnable",
+        "super_range": 320,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "frank": {
+        "safe_range": 236.0,
+        "attack_range": 384.0,
+        "super_type": "damage",
+        "super_range": 448,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "tick": {
+        "safe_range": 341.0,
+        "attack_range": 554.0,
+        "super_type": "spawnable",
+        "super_range": 213,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true
+    },
+    "leon": {
+        "safe_range": 380.0,
+        "attack_range": 618.0,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "rosa": {
+        "safe_range": 0.0,
+        "attack_range": 234.0,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "carl": {
+        "safe_range": 328.0,
+        "attack_range": 533.0,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "bibi": {
+        "safe_range": 0.0,
+        "attack_range": 234.0,
+        "super_type": "damage",
+        "super_range": 2560,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "8bit": {
+        "safe_range": 393.0,
+        "attack_range": 640.0,
+        "super_type": "spawnable",
+        "super_range": 320,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "sandy": {
+        "safe_range": 236.0,
+        "attack_range": 384.0,
+        "super_type": "other",
+        "super_range": 469,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "bea": {
+        "safe_range": 393.0,
+        "attack_range": 640.0,
+        "super_type": "damage",
+        "super_range": 576,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "emz": {
+        "safe_range": 262.0,
+        "attack_range": 426.0,
+        "super_type": "damage",
+        "super_range": 363,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "mrp": {
+        "safe_range": 275.0,
+        "attack_range": 448.0,
+        "super_type": "spawnable",
+        "super_range": 320,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "max": {
+        "safe_range": 328.0,
+        "attack_range": 533.0,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "jacky": {
+        "safe_range": 0.0,
+        "attack_range": 213.0,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true
+    },
+    "gale": {
+        "safe_range": 328.0,
+        "attack_range": 533.0,
+        "super_type": "damage",
+        "super_range": 640,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "nani": {
+        "safe_range": 341.0,
+        "attack_range": 554.0,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "sprout": {
+        "safe_range": 196.0,
+        "attack_range": 320.0,
+        "super_type": "other_target",
+        "super_range": 490,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true
+    },
+    "surge": {
+        "safe_range": 200,
+        "attack_range": 426.0,
+        "super_type": "other_target",
+        "super_range": 213,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "colette": {
+        "safe_range": 341.0,
+        "attack_range": 554.0,
+        "super_type": "charge",
+        "super_range": 704,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "amber": {
+        "safe_range": 328.0,
+        "attack_range": 533.0,
+        "super_type": "damage",
+        "super_range": 469,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "lou": {
+        "safe_range": 367.0,
+        "attack_range": 597.0,
+        "super_type": "other_target",
+        "super_range": 490,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "byron": {
+        "safe_range": 393.0,
+        "attack_range": 640.0,
+        "super_type": "damage",
+        "super_range": 469,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "edgar": {
+        "safe_range": 0.0,
+        "attack_range": 128.0,
+        "super_type": "charge",
+        "super_range": 426,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "stu": {
+        "safe_range": 301.0,
+        "attack_range": 490.0,
+        "super_type": "charge",
+        "super_range": 149,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "belle": {
+        "safe_range": 393.0,
+        "attack_range": 640.0,
+        "super_type": "damage",
+        "super_range": 682,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "squeak": {
+        "safe_range": 301.0,
+        "attack_range": 490.0,
+        "super_type": "damage",
+        "super_range": 533,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "grom": {
+        "safe_range": 301.0,
+        "attack_range": 490.0,
+        "super_type": "damage",
+        "super_range": 533,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true
+    },
+    "buzz": {
+        "safe_range": 0.0,
+        "attack_range": 170.0,
+        "super_type": "charge",
+        "super_range": 640,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "griff": {
+        "safe_range": 328.0,
+        "attack_range": 533.0,
+        "super_type": "damage",
+        "super_range": 576,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "ash": {
+        "safe_range": 0.0,
+        "attack_range": 298.0,
+        "super_type": "spawnable",
+        "super_range": 320,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "meg": {
+        "safe_range": 270.0,
+        "attack_range": 576.0,
+        "super_type": "damage",
+        "super_range": 277,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "lola": {
+        "safe_range": 354.0,
+        "attack_range": 576.0,
+        "super_type": "spawnable",
+        "super_range": 320,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "fang": {
+        "safe_range": 0.0,
+        "attack_range": 170.0,
+        "super_type": "charge",
+        "super_range": 640,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "eve": {
+        "safe_range": 367.0,
+        "attack_range": 597.0,
+        "super_type": "spawnable",
+        "super_range": 320,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "janet": {
+        "safe_range": 0.0,
+        "attack_range": 256.0,
+        "super_type": "charge",
+        "super_range": 149,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "bonnie": {
+        "safe_range": 354.0,
+        "attack_range": 576.0,
+        "super_type": "charge",
+        "super_range": 469,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "otis": {
+        "safe_range": 354.0,
+        "attack_range": 576.0,
+        "super_type": "other_target",
+        "super_range": 576,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "gus": {
+        "safe_range": 367.0,
+        "attack_range": 597.0,
+        "super_type": "other",
+        "super_range": 597,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "buster": {
+        "safe_range": 210.0,
+        "attack_range": 341.0,
+        "super_type": "other",
+        "super_range": 192,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "chester": {
+        "safe_range": 328.0,
+        "attack_range": 533.0,
+        "super_type": "damage",
+        "super_range": 405,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "gray": {
+        "safe_range": 354.0,
+        "attack_range": 576.0,
+        "super_type": "other_target",
+        "super_range": 426,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "mandy": {
+        "safe_range": 354.0,
+        "attack_range": 576.0,
+        "super_type": "damage",
+        "super_range": 2560,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "rt": {
+        "safe_range": 393.0,
+        "attack_range": 640.0,
+        "super_type": "spawnable",
+        "super_range": 0,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "willow": {
+        "safe_range": 288.0,
+        "attack_range": 469.0,
+        "super_type": "other_target",
+        "super_range": 533,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": false
+    },
+    "maisie": {
+        "safe_range": 310.0,
+        "attack_range": 554.0,
+        "super_type": "damage",
+        "super_range": 320,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "hank": {
+        "safe_range": 0.0,
+        "attack_range": 213.0,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": false
+    },
+    "cordelius": {
+        "safe_range": 210.0,
+        "attack_range": 341.0,
+        "super_type": "other_target",
+        "super_range": 576,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "doug": {
+        "safe_range": 0.0,
+        "attack_range": 213.0,
+        "super_type": "other",
+        "super_range": 597,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true
+    },
+    "pearl": {
+        "safe_range": 354.0,
+        "attack_range": 576.0,
+        "super_type": "damage",
+        "super_range": 213,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "chuck": {
+        "safe_range": 262.0,
+        "attack_range": 426.0,
+        "super_type": "damage",
+        "super_range": 426,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "charlie": {
+        "safe_range": 328.0,
+        "attack_range": 533.0,
+        "super_type": "other_target",
+        "super_range": 576,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "mico": {
+        "safe_range": 0.0,
+        "attack_range": 256.0,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true
+    },
+    "kit": {
+        "safe_range": 0.0,
+        "attack_range": 234.0,
+        "super_type": "damage",
+        "super_range": 426,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "melodie": {
+        "safe_range": 315.0,
+        "attack_range": 512.0,
+        "super_type": "charge",
+        "super_range": 341,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "angelo": {
+        "safe_range": 393.0,
+        "attack_range": 640.0,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "draco": {
+        "safe_range": 0.0,
+        "attack_range": 256.0,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "lily": {
+        "safe_range": 0.0,
+        "attack_range": 128.0,
+        "super_type": "damage",
+        "super_range": 576,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "berry": {
+        "safe_range": 249.0,
+        "attack_range": 405.0,
+        "super_type": "charge",
+        "super_range": 533,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": false
+    },
+    "clancy": {
+        "safe_range": 301.0,
+        "attack_range": 490.0,
+        "super_type": "damage",
+        "super_range": 362,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "sam": {
+        "safe_range": 0.0,
+        "attack_range": 192.0,
+        "super_type": "damage",
+        "super_range": 554,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "moe": {
+        "safe_range": 196.0,
+        "attack_range": 320.0,
+        "super_type": "charge",
+        "super_range": 469,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "gene": {
+        "safe_range": 223.0,
+        "attack_range": 362.0,
+        "super_type": "other_target",
+        "super_range": 490,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "ruffs": {
+        "safe_range": 354.0,
+        "attack_range": 576.0,
+        "super_type": "damage",
+        "super_range": 490,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "juju": {
+        "safe_range": 249.0,
+        "attack_range": 405.0,
+        "super_type": "spawnable",
+        "super_range": 320,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true
+    },
+    "shade": {
+        "safe_range": 0.0,
+        "attack_range": 234.0,
+        "super_type": "other",
+        "super_range": 213,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true
+    },
+    "larrylawrie": {
+        "safe_range": 288.0,
+        "attack_range": 469.0,
+        "super_type": "spawnable",
+        "super_range": 320,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true
+    },
+    "kenji": {
+        "safe_range": 0.0,
+        "attack_range": 234.0,
+        "super_type": "damage",
+        "super_range": 469,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "ollie": {
+        "safe_range": 249.0,
+        "attack_range": 405.0,
+        "super_type": "charge",
+        "super_range": 362,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "meeple": {
+        "safe_range": 301.0,
+        "attack_range": 490.0,
+        "super_type": "other_target",
+        "super_range": 320,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "finx": {
+        "safe_range": 328.0,
+        "attack_range": 533.0,
+        "super_type": "other",
+        "super_range": 469,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "lumi": {
+        "safe_range": 341,
+        "attack_range": 554,
+        "super_type": "damage",
+        "super_range": 469,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "alli": {
+        "safe_range": 0,
+        "attack_range": 192,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "kaze": {
+        "safe_range": 0,
+        "attack_range": 170,
+        "super_type": "damage",
+        "super_range": 469,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": false
+    },
+    "jaeyong": {
+        "safe_range": 328,
+        "attack_range": 533,
+        "super_type": "other",
+        "super_range": 0,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "trunk": {
+        "safe_range": 0,
+        "attack_range": 213,
+        "super_type": "charge",
+        "super_range": 448,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": false
+    },
+    "ziggy": {
+        "safe_range": 288.0,
+        "attack_range": 469.0,
+        "super_type": "damage",
+        "super_range": 853,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true
+    },
+    "mina": {
+        "safe_range": 196,
+        "attack_range": 512,
+        "super_type": "damage",
+        "super_range": 448,
+        "ignore_walls_for_attacks": false,
+        "ignore_walls_for_supers": true
+    },
+    "gigi": {
+        "attack_range": 149,
+        "ignore_walls_for_attacks": true,
+        "ignore_walls_for_supers": true,
+        "safe_range": 0,
+        "super_range": 469,
+        "super_type": "charge"
+    },
+    "pierce": {
+      "safe_range": 305,
+      "attack_range": 614,
+      "super_type": "damage",
+      "super_range": 315,
+      "ignore_walls_for_attacks": false,
+      "ignore_walls_for_supers": true
+    },
+    "glowbert": {
+    "safe_range": 315,
+    "attack_range": 512,
+    "super_type": "damage",
+    "super_range": 362,
+    "ignore_walls_for_attacks": false,
+    "ignore_walls_for_supers": false
+  }
+}

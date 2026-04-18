@@ -1,0 +1,13 @@
+customtkinter>=5.2.0
+toml>=0.10.2
+Pillow>=10.0.0
+discord.py>=2.3.2
+opencv-python<4.10.0,>=4.8.0
+requests>=2.31.0
+packaging>=23.1
+pyautogui>=0.9.54
+typing-extensions>=4.7.0
+ultralytics>=8.0.0
+numpy<2
+ninja
+aiohttp>=3.9.0
