@@ -1,12 +1,6 @@
 import math
 import random
 import time
-import threading
-import json
-import os
-import logging
-from dataclasses import dataclass
-from typing import Optional, Tuple, List, Dict
 
 import cv2
 import numpy as np
@@ -17,7 +11,7 @@ from utils import load_toml_as_dict, count_hsv_pixels, load_brawlers_info
 
 brawl_stars_width, brawl_stars_height = 1920, 1080
 
-# 🛡️ ЗАПОБІЖНИКИ ДЛЯ КОНФІГІВ
+# Запобіжники для конфігів
 gen_cfg = load_toml_as_dict("cfg/general_config.toml")
 debug = gen_cfg.get('super_debug', 'no') == "yes"
 
@@ -33,7 +27,6 @@ class Movement:
     def __init__(self, window_controller):
         bot_config = load_toml_as_dict("cfg/bot_config.toml")
         time_config = load_toml_as_dict("cfg/time_tresholds.toml")
-        
         self.fix_movement_keys = {
             "delay_to_trigger": bot_config.get("unstuck_movement_delay", 3.0),
             "duration": bot_config.get("unstuck_movement_hold_time", 1.5),
@@ -44,14 +37,13 @@ class Movement:
         self.game_mode = bot_config.get("gamemode_type", 3)
         self.gamemode_str = str(bot_config.get("gamemode", "other")).lower()
         self.is_showdown = "sd" in self.gamemode_str or "showdown" in self.gamemode_str
-
+        
         gadget_value = bot_config.get("bot_uses_gadgets", "yes")
         self.should_use_gadget = str(gadget_value).lower() in ("yes", "true", "1")
         self.super_treshold = time_config.get("super", 5.0)
         self.gadget_treshold = time_config.get("gadget", 5.0)
         self.hypercharge_treshold = time_config.get("hypercharge", 5.0)
         self.walls_treshold = time_config.get("wall_detection", 1.0)
-        
         self.keep_walls_in_memory = self.walls_treshold <= 1
         self.last_walls_data = []
         self.keys_hold = []
@@ -97,15 +89,15 @@ class Movement:
         self.window_controller.press_key("M", touch_up=touch_up, touch_down=touch_down)
 
     def use_hypercharge(self):
-        if debug: print("Using hypercharge")
+        print("Using hypercharge")
         self.window_controller.press_key("H")
 
     def use_gadget(self):
-        if debug: print("Using gadget")
+        print("Using gadget")
         self.window_controller.press_key("G")
 
     def use_super(self):
-        if debug: print("Using super")
+        print("Using super")
         self.window_controller.press_key("E")
 
     @staticmethod
@@ -188,7 +180,6 @@ class Play(Movement):
         self.wall_history = []
         self.wall_history_length = 3  
         self.scene_data = []
-        
         self.should_detect_walls = bot_config.get("gamemode", "") in ["brawlball", "brawl_ball", "brawll ball"]
         self.minimum_movement_delay = bot_config.get("minimum_movement_delay", 0.1)
         self.no_detection_proceed_delay = time_config.get("no_detection_proceed", 2.0)
@@ -197,15 +188,8 @@ class Play(Movement):
         self.super_pixels_minimum = bot_config.get("super_pixels_minimum", 2400.0)
         self.wall_detection_confidence = bot_config.get("wall_detection_confidence", 0.9)
         self.entity_detection_confidence = bot_config.get("entity_detection_confidence", 0.6)
-        
         self.time_since_holding_attack = None
         self.seconds_to_hold_attack_after_reaching_max = bot_config.get("seconds_to_hold_attack_after_reaching_max", 0.2)
-        
-        self.gamestate = "lobby"
-        
-        # 🔥 ОПТИМІЗАЦІЯ FPS 🔥
-        self._cached_main_data = None
-        self._last_main_detect_time = 0.0
 
     def load_brawler_ranges(self, brawlers_info=None):
         if not brawlers_info:
@@ -257,6 +241,7 @@ class Play(Movement):
     def no_enemy_movement(self, player_data, walls):
         player_position = self.get_player_pos(player_data)
         
+        # Адаптивний рух для ШД
         if self.is_showdown:
             preferred_movement = random.choice(['W', 'A', 'S', 'D', 'WA', 'WD', 'SA', 'SD'])
         else:
@@ -351,6 +336,7 @@ class Play(Movement):
             if key in data and data[key]:
                 self.time_since_detections[key] = time.time()
 
+    # 🔥 ОРИГІНАЛЬНИЙ РУХ 🔥 (Затискає кнопки кожний кадр, як і треба емулятору)
     def do_movement(self, movement):
         movement = movement.lower()
         keys_to_keyDown = []
@@ -372,6 +358,7 @@ class Play(Movement):
             self.brawler_ranges = self.load_brawler_ranges(self.brawlers_info)
         return self.brawler_ranges[brawler]
 
+    # ДЕТЕКТОР ОТРУЙНОГО ДИМУ
     def get_gas_vector(self, frame, player_pos):
         if frame is None or not self.is_showdown: return 0.0, 0.0
         try:
@@ -407,10 +394,12 @@ class Play(Movement):
         safe_range, attack_range, super_range = self.get_brawler_range(brawler)
         player_pos = self.get_player_pos(player_data)
         
+        # 1. ТІКАЄМО ВІД ДИМУ
         gas_vx, gas_vy = self.get_gas_vector(frame, player_pos)
         if math.hypot(gas_vx, gas_vy) > 0:
             return ("D" if gas_vx > 0 else "A") + ("S" if gas_vy > 0 else "W")
 
+        # 2. РУХ
         if not self.is_there_enemy(enemy_data):
             return self.no_enemy_movement(player_data, walls)
             
@@ -461,6 +450,7 @@ class Play(Movement):
         else:
             self.last_movement_time = current_time
 
+        # 3. АТАКИ ТА УЛЬТИ
         if self.is_super_ready and self.time_since_holding_attack is None:
             super_type = brawler_info.get('super_type', '')
             enemy_hittable = self.is_enemy_hittable(player_pos, enemy_coords, walls, "super")
@@ -499,10 +489,11 @@ class Play(Movement):
         return movement
 
     def loop(self, brawler, data, current_time, frame=None):
+        # АТАКА НА КОРОБКИ В ШД
         if self.is_showdown and data.get("box") and not data.get("enemy"):
             player_pos = self.get_player_pos(data['player'][0])
-            box_target = min(data['box'], key=lambda b: math.hypot(self.box_center(b)[0]-player_pos[0], self.box_center(b)[1]-player_pos[1]))
-            box_pos = self.box_center(box_target)
+            box_target = min(data['box'], key=lambda b: math.hypot(self.get_enemy_pos(b)[0]-player_pos[0], self.get_enemy_pos(b)[1]-player_pos[1]))
+            box_pos = self.get_enemy_pos(box_target)
             box_dist = math.hypot(box_pos[0]-player_pos[0], box_pos[1]-player_pos[1])
             
             _, attack_range, _ = self.get_brawler_range(brawler)
@@ -575,15 +566,8 @@ class Play(Movement):
     def main(self, frame, brawler):
         self.current_brawler = brawler
         current_time = time.time()
+        data = self.get_main_data(frame)
         
-        # 🔥 МІКРО-КЕШУВАННЯ (ПІДНІМАЄ ФПС І НЕ КРАШИТЬ) 🔥
-        if current_time - self._last_main_detect_time > 0.035 or self._cached_main_data is None:
-            data = self.get_main_data(frame)
-            self._cached_main_data = data
-            self._last_main_detect_time = current_time
-        else:
-            data = self._cached_main_data
-
         if self.should_detect_walls and current_time - self.time_since_walls_checked > self.walls_treshold:
             tile_data = self.get_tile_data(frame)
             walls = self.process_tile_data(tile_data)
@@ -598,23 +582,16 @@ class Play(Movement):
         
         if data:
             self.time_since_player_last_found = time.time()
-            if getattr(self, "gamestate", "") != "match":
-                self.gamestate = get_state(frame)
-                if self.gamestate != "match":
-                    data = None
                     
         if not data:
             if current_time - self.time_since_player_last_found > 1.0:
                 self.window_controller.keys_up(list("wasd"))
             self.time_since_different_movement = time.time()
             if current_time - self.time_since_last_proceeding > self.no_detection_proceed_delay:
-                current_state = get_state(frame)
-                if current_state != "match":
-                    self.time_since_last_proceeding = current_time
-                else:
-                    move_dir = random.choice(["w", "a", "s", "d"]) if self.is_showdown else "w"
-                    self.do_movement(move_dir)
-                    self.time_since_last_proceeding = time.time()
+                # АНТИ-АФК (Кікстарт на спавні)
+                move_dir = random.choice(["w", "a", "s", "d"]) if self.is_showdown else "w"
+                self.do_movement(move_dir)
+                self.time_since_last_proceeding = time.time()
             return
             
         self.time_since_last_proceeding = time.time()
@@ -633,15 +610,4 @@ class Play(Movement):
             self.is_super_ready = self.check_if_super_ready(frame)
             self.time_since_super_checked = current_time
 
-        movement = self.loop(brawler, data, current_time, frame)
-
-    @staticmethod
-    def movement_to_direction(movement):
-        mapping = {
-            'w': 'up', 'a': 'left', 's': 'down', 'd': 'right',
-            'wa': 'up-left', 'aw': 'up-left', 'wd': 'up-right', 'dw': 'up-right',
-            'sa': 'down-left', 'as': 'down-left', 'sd': 'down-right', 'ds': 'down-right',
-        }
-        movement = movement.lower()
-        movement = ''.join(sorted(movement))
-        return mapping.get(movement, 'idle' if movement == '' else movement)
+        movement = self.loop(brawler, data, current_time, frame=frame)

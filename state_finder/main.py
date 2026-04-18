@@ -24,7 +24,6 @@ def is_template_in_region(image, template_path, region):
     orig_x, orig_y, orig_width, orig_height = region
     width_ratio, height_ratio = current_width / orig_screen_width, current_height / orig_screen_height
 
-
     new_x, new_y = int(orig_x * width_ratio), int(orig_y * height_ratio)
     new_width, new_height = int(orig_width * width_ratio), int(orig_height * height_ratio)
     cropped_image = image[new_y:new_y + new_height, new_x:new_x + new_width]
@@ -49,41 +48,48 @@ crop_region = load_toml_as_dict("./cfg/lobby_config.toml")['lobby']['trophy_obse
 
 def rework_game_result(res_string):
     res_string = res_string.lower()
-    if res_string in ["victory", "defeat", "draw"]:
-        return res_string, 1.0
+    
+    # 🔥 ФІКС ДЛЯ ШОУДАУНУ ТА УКРАЇНСЬКОЇ МОВИ 🔥
+    valid_words = ["victory", "defeat", "draw", "showdown", "rank", "місце", "вижили", "бой"]
+    
+    for word in valid_words:
+        if word in res_string:
+            return word, 1.0
 
-    ratios = {
-        "victory": SequenceMatcher(None, res_string, 'victory').ratio(),
-        "defeat": SequenceMatcher(None, res_string, 'defeat').ratio(),
-        "draw": SequenceMatcher(None, res_string, "draw").ratio()
-    }
+    ratios = {w: SequenceMatcher(None, res_string, w).ratio() for w in valid_words}
     highest_ratio_string = max(ratios, key=ratios.get)
 
     return highest_ratio_string, ratios[highest_ratio_string]
 
 
-
 def find_game_result(screenshot):
-    # Vérifiez que screenshot est bien un numpy.ndarray
     if not isinstance(screenshot, np.ndarray):
         raise TypeError("Expected a numpy.ndarray, but got {}".format(type(screenshot)))
 
-    # Effectuez le recadrage directement sur l'array numpy
+    # --- 1. Оригінальна перевірка (верхній лівий кут) ---
     x1, y1, x2, y2 = crop_region
-    screenshot = screenshot[y1:y2, x1:x2]
+    crop1 = screenshot[y1:y2, x1:x2]
+    result1 = reader.readtext(crop1)
+    
+    if len(result1) > 0:
+        for _, text, conf in result1:
+            game_result, ratio = rework_game_result(text)
+            if ratio >= 0.55:
+                return True
 
-    # Appliquez l'OCR
-    result = reader.readtext(screenshot)
-    if len(result) == 0:
-        return False
+    # --- 2. БРОНЕБІЙНИЙ ФІКС: Перевіряємо кнопки "ПРОДОВЖИТИ" / "ВИХІД" внизу ---
+    h, w = screenshot.shape[:2]
+    # Кропаємо правий нижній кут екрану (там де завжди кнопка виходу)
+    crop2 = screenshot[int(h*0.8):h, int(w*0.6):w] 
+    result2 = reader.readtext(crop2)
+    
+    if len(result2) > 0:
+        for _, text, conf in result2:
+            txt = text.lower().replace(" ", "")
+            if any(word in txt for word in ["exit", "proceed", "продовжити", "вихід", "далі"]):
+                return True
 
-    _, text, conf = result[0]
-    game_result, ratio = rework_game_result(text)
-    if ratio < 0.55:
-        if ratio > 0:
-            print("Couldn't find game result", game_result, ratio)
-        return False
-    return True
+    return False
 
 
 def get_in_game_state(image):
@@ -136,7 +142,7 @@ def is_in_star_road(image):
 
 
 def is_in_star_drop(image):
-    for image_filename in images_with_star_drop: #kept getting errors so tried changing from image to image_filename
+    for image_filename in images_with_star_drop: 
         if is_template_in_region(image, path + image_filename, region_data['star_drop']):
             return True
     return False
@@ -145,7 +151,7 @@ def get_state(screenshot):
     screenshot = np.array(screenshot)
     screenshot_bgr = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
     state = get_in_game_state(screenshot_bgr)
-    print(f"State: {state}")
+    # Закоментував спам в консоль "State: match", щоб не забивало екран
+    if state != "match":
+        print(f"State: {state}")
     return state
-
-
