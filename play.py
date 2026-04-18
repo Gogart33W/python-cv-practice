@@ -27,11 +27,9 @@ GAME_HEIGHT = 1080
 Vec2 = Tuple[float, float]
 Box  = Tuple[float, float, float, float]
 
-
 # ─────────────────────────────────────────────────────────────────────────────
-# BRAIN DATA  —  персистентні параметри навчання
+# BRAIN DATA  
 # ─────────────────────────────────────────────────────────────────────────────
-
 @dataclass
 class BrainData:
     kiting_multiplier: float = 0.85
@@ -41,11 +39,9 @@ class BrainData:
     games_won:         int   = 0
     games_lost:        int   = 0
 
-
 # ─────────────────────────────────────────────────────────────────────────────
-# ADAPTIVE BRAIN  —  ammo-трекінг + адаптація
+# ADAPTIVE BRAIN  
 # ─────────────────────────────────────────────────────────────────────────────
-
 class AdaptiveBrain:
     AMMO_MAX       = 3
     AMMO_REGEN_SEC = 1.7
@@ -68,8 +64,7 @@ class AdaptiveBrain:
                     raw = json.load(f)
                 valid = {k: raw[k] for k in BrainData.__dataclass_fields__ if k in raw}
                 return BrainData(**valid)
-            except Exception as e:
-                logger.warning("Brain load failed (%s), using defaults.", e)
+            except Exception: pass
         return BrainData()
 
     def save(self, force: bool = False) -> None:
@@ -80,17 +75,14 @@ class AdaptiveBrain:
             with open(self._file, "w") as f:
                 json.dump(self.data.__dict__, f, indent=4)
             self._last_save = now
-        except Exception as e:
-            logger.warning("Brain save failed: %s", e)
+        except Exception: pass
 
     @property
-    def ammo(self) -> int:
-        return self._ammo
+    def ammo(self) -> int: return self._ammo
 
     def consume_ammo(self) -> bool:
         with self._ammo_lock:
-            if self._ammo <= 0:
-                return False
+            if self._ammo <= 0: return False
             self._ammo -= 1
             self._regen_q.append(time.time())
             return True
@@ -102,12 +94,13 @@ class AdaptiveBrain:
             for t in self._regen_q:
                 if now - t >= self.AMMO_REGEN_SEC:
                     self._ammo = min(self.AMMO_MAX, self._ammo + 1)
-                else:
-                    kept.append(t)
+                else: kept.append(t)
             self._regen_q = kept
 
-    def on_game_result(self, won: bool) -> None:
+    def on_game_result(self, rank_or_win) -> None:
         d = self.data
+        won = rank_or_win <= 2 if isinstance(rank_or_win, int) else bool(rank_or_win)
+        
         if won:
             d.games_won += 1
             d.kiting_multiplier = round(max(0.68, d.kiting_multiplier - 0.008), 4)
@@ -127,7 +120,9 @@ class AdaptiveBrain:
             d.strafe_interval   = round(max(0.55, d.strafe_interval - 0.07),  4)
             self.save()
 
-
+# ─────────────────────────────────────────────────────────────────────────────
+# WALL INDEX & TRACKER
+# ─────────────────────────────────────────────────────────────────────────────
 class WallIndex:
     def __init__(self) -> None:
         self._tree:  Optional[STRtree] = None
@@ -143,11 +138,9 @@ class WallIndex:
         self._tree  = STRtree(polys) if polys else None
 
     def intersects_line(self, line: LineString) -> bool:
-        if self._tree is None:
-            return False
+        if self._tree is None: return False
         candidates = self._tree.query(line)
         return any(self._polys[i].intersects(line) for i in candidates)
-
 
 class EnemyTracker:
     WINDOW    = 0.38
@@ -158,8 +151,7 @@ class EnemyTracker:
     def __init__(self) -> None:
         self._track: List[Tuple[float, Vec2]] = []
 
-    def reset(self) -> None:
-        self._track.clear()
+    def reset(self) -> None: self._track.clear()
 
     def push(self, pos: Vec2, t: float) -> None:
         self._track = [(ts, p) for ts, p in self._track if t - ts <= self.WINDOW]
@@ -170,11 +162,9 @@ class EnemyTracker:
         self._track.append((t, pos))
 
     def velocity(self) -> Optional[Vec2]:
-        if len(self._track) < 3:
-            return None
+        if len(self._track) < 3: return None
         dt = self._track[-1][0] - self._track[0][0]
-        if dt < self.MIN_DT:
-            return None
+        if dt < self.MIN_DT: return None
         vx = (self._track[-1][1][0] - self._track[0][1][0]) / dt
         vy = (self._track[-1][1][1] - self._track[0][1][1]) / dt
         vx = max(-self.MAX_SPEED, min(self.MAX_SPEED, vx))
@@ -183,29 +173,37 @@ class EnemyTracker:
 
     def predict(self, lead_time: float) -> Optional[Vec2]:
         vel = self.velocity()
-        if vel is None:
-            return None
+        if vel is None: return None
         px = self._track[-1][1][0] + vel[0] * lead_time
         py = self._track[-1][1][1] + vel[1] * lead_time
         return (px, py)
 
-
+# ─────────────────────────────────────────────────────────────────────────────
+# LOW-LEVEL MOVEMENT (ФІКС ДЖОЙСТИКА)
+# ─────────────────────────────────────────────────────────────────────────────
 class Movement:
     def __init__(self, window_controller) -> None:
         bot_cfg  = load_toml_as_dict("cfg/bot_config.toml")
         time_cfg = load_toml_as_dict("cfg/time_tresholds.toml")
 
         self.window_controller = window_controller
-        self.game_mode         = bot_cfg["gamemode_type"]
+        
+        self.gamemode_str = str(bot_cfg.get("gamemode", "other")).lower()
+        self.gamemode_type = bot_cfg.get("gamemode_type", 3)
+        
+        self.is_showdown = "sd" in self.gamemode_str or "showdown" in self.gamemode_str
+        self.is_brawlball = self.gamemode_type == 3 or "brawl" in self.gamemode_str
+        
         self.should_use_gadget = str(bot_cfg.get("bot_uses_gadgets", "no")).lower() in ("yes","true","1")
 
-        self.super_treshold        = time_cfg["super"]
-        self.gadget_treshold       = time_cfg["gadget"]
-        self.hypercharge_treshold  = time_cfg["hypercharge"]
-        self.walls_treshold        = time_cfg["wall_detection"]
-
-        self._unstuck_delay    = bot_cfg["unstuck_movement_delay"]
-        self._unstuck_duration = bot_cfg["unstuck_movement_hold_time"]
+        self.super_treshold        = time_cfg.get("super", 5.0)
+        self.gadget_treshold       = time_cfg.get("gadget", 5.0)
+        self.hypercharge_treshold  = time_cfg.get("hypercharge", 5.0)
+        
+        self._min_move_delay   = float(bot_cfg.get("minimum_movement_delay", 0.1))
+        self._unstuck_delay    = float(bot_cfg.get("unstuck_movement_delay", 3.0))
+        self._unstuck_duration = float(bot_cfg.get("unstuck_movement_hold_time", 1.5))
+        
         self._unstuck_active   = False
         self._unstuck_key      = ""
         self._unstuck_start    = 0.0
@@ -214,11 +212,11 @@ class Movement:
         self._last_movement     = ""
         self._last_movement_time= time.time()
         self._same_move_since   = time.time()
+        self._last_move_change_time = 0.0
 
         self.is_gadget_ready      = False
         self.is_hypercharge_ready = False
         self.is_super_ready       = False
-
         self.time_since_gadget_checked      = 0.0
         self.time_since_hypercharge_checked = 0.0
         self.time_since_super_checked       = 0.0
@@ -235,82 +233,74 @@ class Movement:
 
     def _set_keys(self, keys: List[str]) -> None:
         now = time.time()
+        
+        # 🔥 ГОЛОВНИЙ ФІКС: Більше ніяких "0.5 сек"! 
+        # Якщо ми вже тиснемо правильні кнопки - просто продовжуємо їх тиснути!
         if set(keys) == set(self._keys_held):
-            # Антизалипання емулятора (свіпаємо кнопки кожні 1.5с)
-            if now - self._last_movement_time > 1.5 and keys:
+            # Щоб емулятор не "заснув" від занадто довгого затискання,
+            # перенатискаємо кнопку ТІЛЬКИ якщо пройшло 3 секунди (а не 0.5)
+            if now - getattr(self, '_last_refresh_time', 0) > 3.0 and keys:
                 self.window_controller.keys_up(self._keys_held)
-                time.sleep(0.015)
+                time.sleep(0.01)
                 self.window_controller.keys_down(keys)
-                self._last_movement_time = now
+                self._last_refresh_time = now
             return
 
-        down = [k for k in keys       if k not in self._keys_held]
+        down = [k for k in keys if k not in self._keys_held]
         up   = [k for k in self._keys_held if k not in keys]
+
         if up:   self.window_controller.keys_up(up)
         if down: self.window_controller.keys_down(down)
 
-        self._keys_held          = list(keys)
+        self._keys_held = list(keys)
         self._last_movement_time = now
+        self._last_refresh_time = now
 
     def do_movement(self, movement: str) -> None:
         now = time.time()
         movement = "".join(sorted(movement.lower()))
 
         if movement == self._last_movement:
-            # Запобігаємо застряганню на одному русі
             if movement and now - self._same_move_since > 3.0:
                 movement = random.choice(["w","a","s","d","wa","wd","sa","sd"])
                 self._same_move_since = now
         else:
+            if now - getattr(self, '_last_move_change_time', 0) < self._min_move_delay and movement != "":
+                return
+            self._last_move_change_time = now
             self._same_move_since = now
             self._last_movement   = movement
 
         wanted = [k for k in ["w","a","s","d"] if k in movement]
         self._set_keys(wanted)
 
-    def release_all(self) -> None:
+    def release_all(self) -> None: 
         self._set_keys([])
 
-    def directed_attack(self, player_pos: Vec2, target_pos: Vec2,
-                        attack_range: float, is_super: bool = False,
-                        brain: Optional[AdaptiveBrain] = None) -> bool:
-        if brain and not is_super and not brain.consume_ammo():
-            return False
-
-        dx    = target_pos[0] - player_pos[0]
-        dy    = target_pos[1] - player_pos[1]
-        angle = math.atan2(dy, dx)
-        dist  = math.hypot(dx, dy)
-
-        if is_super:
-            jx = int(1460 * self.window_controller.width_ratio)
-            jy = int(830  * self.window_controller.height_ratio)
-        else:
-            jx = int(1600 * self.window_controller.width_ratio)
-            jy = int(850  * self.window_controller.height_ratio)
-
+    def directed_attack(self, player_pos: Vec2, target_pos: Vec2, attack_range: float, is_super: bool = False, brain: Optional[AdaptiveBrain] = None) -> bool:
+        if brain and not is_super and not brain.consume_ammo(): return False
+        dx, dy = target_pos[0] - player_pos[0], target_pos[1] - player_pos[1]
+        angle, dist = math.atan2(dy, dx), math.hypot(dx, dy)
+        jx, jy = (1460, 830) if is_super else (1600, 850)
+        jx, jy = int(jx * self.window_controller.width_ratio), int(jy * self.window_controller.height_ratio)
         max_r = 350 * self.window_controller.scale_factor
-        pull  = min(dist / max(attack_range * 0.8, 1), 1.0)
-        r     = max(max_r * pull, 60 * self.window_controller.scale_factor)
-        end_x = int(jx + r * math.cos(angle))
-        end_y = int(jy + r * math.sin(angle))
-
+        pull = min(dist / max(attack_range * 0.8, 1), 1.0)
+        r = max(max_r * pull, 60 * self.window_controller.scale_factor)
+        end_x, end_y = int(jx + r * math.cos(angle)), int(jy + r * math.sin(angle))
         self.window_controller.swipe(jx, jy, end_x, end_y, duration=0.08)
         time.sleep(0.015)
         return True
 
     def attack_in_direction(self, direction_str: str) -> None:
-        jx    = int(1600 * self.window_controller.width_ratio)
-        jy    = int(850  * self.window_controller.height_ratio)
-        delta = int(200  * self.window_controller.scale_factor)
+        jx, jy = int(1600 * self.window_controller.width_ratio), int(850 * self.window_controller.height_ratio)
+        delta = int(200 * self.window_controller.scale_factor)
         dx, dy = 0, 0
         if "w" in direction_str: dy -= delta
         if "s" in direction_str: dy += delta
         if "a" in direction_str: dx -= delta
         if "d" in direction_str: dx += delta
         if dx == 0 and dy == 0:
-            dy = -delta if self.game_mode == 3 else 0
-            dx = delta  if self.game_mode != 3 else 0
+            dy, dx = (-delta, 0) if self.is_brawlball else (0, delta)
         self.window_controller.swipe(jx, jy, jx+dx, jy+dy, duration=0.08)
 
     def use_super(self)       -> None: self.window_controller.press_key("E")
@@ -334,17 +324,16 @@ class Movement:
             return rev
         return movement
 
-
 # ─────────────────────────────────────────────────────────────────────────────
-# PLAY  —  Швидкий і безпечний для GPU
+# PLAY  —  СИНХРОННИЙ І РОЗУМНИЙ БОТ
 # ─────────────────────────────────────────────────────────────────────────────
-
 class Play(Movement):
 
-    STATE_SCOUT = "SCOUT"
+    STATE_GAS   = "GAS!"   
+    STATE_HEAL  = "HEAL"
     STATE_FIGHT = "FIGHT"
     STATE_LOOT  = "LOOT"
-    STATE_HEAL  = "HEAL"
+    STATE_SCOUT = "SCOUT"
 
     HP_HEAL_ENTER = 35.0   
     HP_HEAL_EXIT  = 75.0   
@@ -356,26 +345,25 @@ class Play(Movement):
         time_cfg = load_toml_as_dict("cfg/time_tresholds.toml")
 
         self.Detect_main  = Detect(main_info_model,     classes=["enemy","teammate","player","box"])
-        self.Detect_tiles = Detect(tile_detector_model, classes=bot_cfg["wall_model_classes"])
-        self.wall_det_conf   = bot_cfg["wall_detection_confidence"]
-        self.entity_det_conf = bot_cfg["entity_detection_confidence"]
+        self.Detect_tiles = Detect(tile_detector_model, classes=bot_cfg.get("wall_model_classes", []))
+        
+        self.wall_det_conf   = float(bot_cfg.get("wall_detection_confidence", 0.9))
+        self.entity_det_conf = float(bot_cfg.get("entity_detection_confidence", 0.6))
 
-        self.gadget_px_min = bot_cfg.get("gadget_pixels_minimum",      50)
-        self.hyper_px_min  = bot_cfg.get("hypercharge_pixels_minimum", 50)
-        self.super_px_min  = bot_cfg.get("super_pixels_minimum",       50)
+        self.gadget_px_min = float(bot_cfg.get("gadget_pixels_minimum", 2000.0))
+        self.hyper_px_min  = float(bot_cfg.get("hypercharge_pixels_minimum", 2000.0))
+        self.super_px_min  = float(bot_cfg.get("super_pixels_minimum", 2400.0))
 
         self.brawlers_info    = load_brawlers_info()
         self._brawler_ranges: Dict[str, Tuple[int,int,int]] = {}
 
-        self.no_detect_delay = time_cfg["no_detection_proceed"]
-
         self._wall_index     = WallIndex()
         self._wall_history:  List[List[Box]] = []
         self._wall_hist_len  = 3
+        self._last_wall_proc = 0.0
+        self._wall_proc_ivl  = 0.2
 
-        # 🔥 ГЛОБАЛЬНИЙ ЛОК ДЛЯ ВІДЕОКАРТИ 🔥
         self._ai_lock        = threading.Lock()
-
         self._current_frame  = None
         self._frame_lock     = threading.Lock()
         self._cached_data:   Optional[dict] = None
@@ -404,15 +392,9 @@ class Play(Movement):
 
         self._last_frame_hash = 0
         self._freeze_start    = time.time()
-
         self._blind_dir       = ""
         self._blind_dir_time  = 0.0
-
-        self._last_det: Dict[str, float] = {
-            "player": time.time(),
-            "enemy":  time.time(),
-        }
-        self._last_no_det_proc = 0.0
+        self._last_det: Dict[str, float] = {"player": time.time(), "enemy": time.time()}
 
         self.scene_data: List[dict] = []
 
@@ -420,57 +402,62 @@ class Play(Movement):
         self._vision_thread = threading.Thread(target=self._vision_loop, daemon=True)
         self._vision_thread.start()
 
-    @property
-    def time_since_detections(self) -> Dict[str, float]:
-        return self._last_det
-
-    def stop(self) -> None:
-        self._running = False
-
     def _vision_loop(self) -> None:
-        """Всі моделі обробляються ТУТ по черзі. FPS мейну залишається 60!"""
         while self._running:
-            with self._frame_lock:
-                frame = self._current_frame
+            with self._frame_lock: frame = self._current_frame
             if frame is not None:
                 try:
                     with self._ai_lock:
-                        # 1. Гравці та об'єкти
                         result = self.Detect_main.detect_objects(frame, conf_tresh=self.entity_det_conf)
-                        
-                        # 2. Стіни (раз на 5 ітерацій)
                         if int(time.time() * 10) % 5 == 0:
                             tiles = self.Detect_tiles.detect_objects(frame, conf_tresh=self.wall_det_conf)
-                            walls = []
-                            for cls, boxes in tiles.items():
-                                if cls != "bush":
-                                    walls.extend(boxes)
-                                    
+                            walls = [b for cls, boxes in tiles.items() if cls != "bush" for b in boxes]
                             self._wall_history.append(walls)
-                            if len(self._wall_history) > self._wall_hist_len:
-                                self._wall_history.pop(0)
-                                
+                            if len(self._wall_history) > self._wall_hist_len: self._wall_history.pop(0)
                             merged = {}
                             for wlist in self._wall_history:
-                                for w in wlist:
-                                    merged[tuple(w)] = merged.get(tuple(w), 0) + 1
-                            combined = [list(k) for k, cnt in merged.items() if cnt >= 1]
-                            self._wall_index.rebuild(combined)
-                            
-                        # 3. Game State (щоб не блокувати main)
+                                for w in wlist: merged[tuple(w)] = merged.get(tuple(w), 0) + 1
+                            self._wall_index.rebuild([list(k) for k, cnt in merged.items() if cnt >= 1])
                         g_state = get_state(frame)
-
                     with self._data_lock:
                         self._cached_data = result
                         self._cached_game_state = g_state
-
-                except Exception as e:
-                    logger.debug("Vision error: %s", e)
+                except Exception: pass
             time.sleep(self._detect_ivl)
 
+    def _get_gas_vector(self, frame, player_pos: Vec2) -> Tuple[float, float]:
+        if frame is None or not self.is_showdown: return 0.0, 0.0
+        try:
+            arr = np.array(frame) if isinstance(frame, Image.Image) else frame
+            small = cv2.resize(arr, (GAME_WIDTH // 10, GAME_HEIGHT // 10))
+            hsv = cv2.cvtColor(small, cv2.COLOR_RGB2HSV)
+            
+            lower_green = np.array([45, 150, 150])
+            upper_green = np.array([85, 255, 255])
+            mask = cv2.inRange(hsv, lower_green, upper_green)
+            y_coords, x_coords = np.where(mask > 0)
+            
+            if len(x_coords) < 10: return 0.0, 0.0 
+                
+            px, py = player_pos[0] / 10.0, player_pos[1] / 10.0
+            gx, gy = 0.0, 0.0
+            fear_radius = 45.0 * self.window_controller.scale_factor
+            
+            for x, y in zip(x_coords, y_coords):
+                dist = math.hypot(x - px, y - py)
+                if dist < fear_radius:
+                    weight = 1.0 / max(dist, 1.0)
+                    gx += (px - x) * weight 
+                    gy += (py - y) * weight
+                    
+            length = math.hypot(gx, gy)
+            if length > 0:
+                return (gx / length) * 500.0, (gy / length) * 500.0
+        except Exception: pass
+        return 0.0, 0.0
+
     def _read_real_hp(self, frame, now: float) -> float:
-        if now - self._last_hp_check < self._hp_check_interval:
-            return self._real_hp
+        if now - self._last_hp_check < self._hp_check_interval: return self._real_hp
         self._last_hp_check = now
         try:
             w = self.window_controller
@@ -480,43 +467,24 @@ class Play(Movement):
             ))
             green_px = count_hsv_pixels(crop, (42, 90, 90),  (90, 255, 255))
             total_px = count_hsv_pixels(crop, (0,  0,  30),  (180,255,255))
-            if total_px > 10:
-                self._real_hp = max(0.0, min(100.0, green_px / total_px * 100.0))
-        except Exception as e:
-            pass
+            if total_px > 10: self._real_hp = max(0.0, min(100.0, green_px / total_px * 100.0))
+        except Exception: pass
         return self._real_hp
 
     def _check_abilities(self, frame, now: float) -> None:
         w = self.window_controller
-        if now - self.time_since_hypercharge_checked > self.hypercharge_treshold:
-            try:
-                crop = frame.crop((
-                    int(1350*w.width_ratio), int(940*w.height_ratio),
-                    int(1450*w.width_ratio), int(1050*w.height_ratio),
-                ))
-                self.is_hypercharge_ready = count_hsv_pixels(crop,(137,158,159),(179,255,255)) > self.hyper_px_min
-            except Exception: pass
-            self.time_since_hypercharge_checked = now
-
-        if now - self.time_since_gadget_checked > self.gadget_treshold:
-            try:
-                crop = frame.crop((
-                    int(1580*w.width_ratio), int(930*w.height_ratio),
-                    int(1700*w.width_ratio), int(1050*w.height_ratio),
-                ))
-                self.is_gadget_ready = count_hsv_pixels(crop,(57,219,165),(62,255,255)) > self.gadget_px_min
-            except Exception: pass
-            self.time_since_gadget_checked = now
-
-        if now - self.time_since_super_checked > self.super_treshold:
-            try:
-                crop = frame.crop((
-                    int(1460*w.width_ratio), int(830*w.height_ratio),
-                    int(1560*w.width_ratio), int(930*w.height_ratio),
-                ))
-                self.is_super_ready = count_hsv_pixels(crop,(17,170,200),(27,255,255)) > self.super_px_min
-            except Exception: pass
-            self.time_since_super_checked = now
+        for name, th, pxmin, color in [
+            ("hypercharge", self.hypercharge_treshold, self.hyper_px_min, [(137,158,159),(179,255,255)]),
+            ("gadget", self.gadget_treshold, self.gadget_px_min, [(57,219,165),(62,255,255)]),
+            ("super", self.super_treshold, self.super_px_min, [(17,170,200),(27,255,255)])
+        ]:
+            if now - getattr(self, f"time_since_{name}_checked") > th:
+                try:
+                    c = (1350,940,1450,1050) if name=="hypercharge" else (1580,930,1700,1050) if name=="gadget" else (1460,830,1560,930)
+                    crop = frame.crop((int(c[0]*w.width_ratio), int(c[1]*w.height_ratio), int(c[2]*w.width_ratio), int(c[3]*w.height_ratio)))
+                    setattr(self, f"is_{name}_ready", count_hsv_pixels(crop, color[0], color[1]) > pxmin)
+                except Exception: pass
+                setattr(self, f"time_since_{name}_checked", now)
 
     def _get_range(self, brawler: str) -> Tuple[int,int,int]:
         if brawler not in self._brawler_ranges:
@@ -533,92 +501,57 @@ class Play(Movement):
         key = "ignore_walls_for_attacks" if skill == "attack" else "ignore_walls_for_supers"
         return bool(self.brawlers_info.get(brawler, {}).get(key, False))
 
-    def _has_los(self, a: Vec2, b: Vec2) -> bool:
-        return not self._wall_index.intersects_line(LineString([a, b]))
+    def _has_los(self, a: Vec2, b: Vec2) -> bool: return not self._wall_index.intersects_line(LineString([a, b]))
 
-    def _is_path_clear(self, pos: Vec2, move: str, distance: Optional[float] = None) -> bool:
-        d  = distance or self.TILE_SIZE * self.window_controller.scale_factor
+    def _is_path_clear(self, pos: Vec2, move: str) -> bool:
+        d  = self.TILE_SIZE * self.window_controller.scale_factor
         dx = ("d" in move) * d - ("a" in move) * d
         dy = ("s" in move) * d - ("w" in move) * d
-        if dx == 0 and dy == 0:
-            return True
+        if dx == 0 and dy == 0: return True
         return not self._wall_index.intersects_line(LineString([pos, (pos[0]+dx, pos[1]+dy)]))
 
     def _best_free_move(self, pos: Vec2, preferred: str) -> str:
         candidates = [preferred] + [m for m in ["w","a","s","d","wa","wd","sa","sd"] if m != preferred]
         for m in candidates:
-            if m and self._is_path_clear(pos, m):
-                return m
+            if m and self._is_path_clear(pos, m): return m
         return preferred
 
-    def _find_best_target(self, entities: List[Box], player_pos: Vec2,
-                          skill: str) -> Optional[Tuple[Vec2, float]]:
-        pierce    = self._can_pierce_walls(self.brain.brawler if self.brain else "", skill)
+    def _find_best_target(self, entities: List[Box], player_pos: Vec2, skill: str) -> Optional[Tuple[Vec2, float]]:
+        pierce = self._can_pierce_walls(self.brain.brawler if self.brain else "", skill)
         best_pos, best_dist = None, float("inf")
-
         for box in entities:
-            ep  = self.box_center(box)
-            d   = self.dist(ep, player_pos)
-            if (pierce or self._has_los(player_pos, ep)) and d < best_dist:
-                best_pos, best_dist = ep, d
-
-        if best_pos is None:
+            ep, d = self.box_center(box), self.dist(self.box_center(box), player_pos)
+            if (pierce or self._has_los(player_pos, ep)) and d < best_dist: best_pos, best_dist = ep, d
+        if not best_pos:
             for box in entities:
-                ep = self.box_center(box)
-                d  = self.dist(ep, player_pos)
-                if d < best_dist:
-                    best_pos, best_dist = ep, d
-
+                ep, d = self.box_center(box), self.dist(self.box_center(box), player_pos)
+                if d < best_dist: best_pos, best_dist = ep, d
         return (best_pos, best_dist) if best_pos else None
 
-    def _predicted_pos(self, enemy_pos: Vec2, player_pos: Vec2, now: float) -> Vec2:
-        self._tracker.push(enemy_pos, now)
+    def _handle_attack(self, player_pos: Vec2, enemy_pos: Vec2, enemy_dist: float, attack_range: float, super_range: float, brawler_info: dict, now: float) -> None:
         brawler = self.brain.brawler if self.brain else ""
-        info    = self.brawlers_info.get(brawler, {})
+        has_los_atk = self._can_pierce_walls(brawler, "attack") or self._has_los(player_pos, enemy_pos)
 
-        proj_speed = float(info.get("projectile_speed", 1100))
-        distance   = self.dist(enemy_pos, player_pos)
-        lead_time  = min(distance / max(proj_speed, 1), 0.55)
+        if self._human_state == self.STATE_HEAL and enemy_dist > attack_range * 0.45: return
 
-        pred = self._tracker.predict(lead_time)
-        return pred if pred else enemy_pos
-
-    def _handle_attack(self, player_pos: Vec2, enemy_pos: Vec2,
-                       enemy_dist: float, attack_range: float,
-                       super_range: float, brawler_info: dict, now: float) -> None:
-
-        brawler     = self.brain.brawler if self.brain else ""
-        pierce_atk  = self._can_pierce_walls(brawler, "attack")
-        has_los_atk = pierce_atk or self._has_los(player_pos, enemy_pos)
-
-        if self._human_state == self.STATE_HEAL and enemy_dist > attack_range * 0.45:
-            return
-
-        in_range    = enemy_dist <= attack_range
-        ammo_ok     = (self.brain.ammo > 0) if self.brain else True
-        cooldown_ok = (now - self._last_attack_time) > self._attack_cooldown * 0.85
-
-        if in_range and has_los_atk and ammo_ok and cooldown_ok:
+        if enemy_dist <= attack_range and has_los_atk and (self.brain.ammo > 0 if self.brain else True) and (now - self._last_attack_time > self._attack_cooldown * 0.85):
             if self.should_use_gadget and self.is_gadget_ready:
                 self.use_gadget()
                 self.is_gadget_ready = False
-
             if self.is_hypercharge_ready:
                 self.use_hypercharge()
                 self.is_hypercharge_ready = False
 
-            pred = self._predicted_pos(enemy_pos, player_pos, now)
-            if self.directed_attack(player_pos, pred, attack_range,
-                                    is_super=False, brain=self.brain):
+            self._tracker.push(enemy_pos, now)
+            lead = min(enemy_dist / max(float(brawler_info.get("projectile_speed", 1100)), 1), 0.55)
+            pred = self._tracker.predict(lead) or enemy_pos
+            if self.directed_attack(player_pos, pred, attack_range, is_super=False, brain=self.brain):
                 self._last_attack_time = now
 
-        if not self.is_super_ready:
-            return
-        pierce_sup  = self._can_pierce_walls(brawler, "super")
-        has_los_sup = pierce_sup or self._has_los(player_pos, enemy_pos)
-        super_type  = brawler_info.get("super_type", "")
-        if has_los_sup and (enemy_dist <= super_range or super_type in ("spawnable","other")):
-            pred = self._predicted_pos(enemy_pos, player_pos, now)
+        if not self.is_super_ready: return
+        if (self._can_pierce_walls(brawler, "super") or self._has_los(player_pos, enemy_pos)) and (enemy_dist <= super_range or brawler_info.get("super_type") in ("spawnable","other")):
+            self._tracker.push(enemy_pos, now)
+            pred = self._tracker.predict(min(enemy_dist / max(float(brawler_info.get("projectile_speed", 1100)), 1), 0.55)) or enemy_pos
             if self.directed_attack(player_pos, pred, attack_range, is_super=True):
                 self.is_super_ready = False
 
@@ -635,70 +568,87 @@ class Play(Movement):
         teammates = data.get("teammate") or []
 
         real_hp = self._read_real_hp(data.get("_frame"), now)
+        gas_vx, gas_vy = self._get_gas_vector(data.get("_frame"), player_pos)
+        is_gas_near = math.hypot(gas_vx, gas_vy) > 0
 
-        if real_hp <= self.HP_HEAL_ENTER:
+        # ── FSM TRANSITIONS ──
+        if is_gas_near:
+            self._human_state = self.STATE_GAS
+        elif real_hp <= self.HP_HEAL_ENTER:
             self._human_state = self.STATE_HEAL
         elif real_hp >= self.HP_HEAL_EXIT and self._human_state == self.STATE_HEAL:
             self._human_state = self.STATE_SCOUT
 
-        if self._human_state != self.STATE_HEAL:
-            if enemies:
-                self._human_state = self.STATE_FIGHT
-            elif boxes:
-                self._human_state = self.STATE_LOOT
-            else:
-                self._human_state = self.STATE_SCOUT
+        if self._human_state not in (self.STATE_HEAL, self.STATE_GAS):
+            enemy_target = self._find_best_target(enemies, player_pos, "attack")
+            box_target   = self._find_best_target(boxes, player_pos, "attack") if self.is_showdown else None
 
-        if self._human_state == self.STATE_HEAL:
-            if enemies:
-                closest = min(enemies, key=lambda b: self.dist(self.box_center(b), player_pos))
-                ex, ey  = self.box_center(closest)
-                dx, dy  = player_pos[0] - ex, player_pos[1] - ey
-                movement = ("d" if dx > 0 else "a") + ("s" if dy > 0 else "w")
-                target = self._find_best_target(enemies, player_pos, "attack")
-                if target:
-                    self._handle_attack(player_pos, target[0], target[1],
-                                        attack_range, super_range, brawler_info, now)
-            elif teammates:
-                tx, ty   = self.box_center(teammates[0])
-                dx, dy   = tx - player_pos[0], ty - player_pos[1]
-                movement = ("d" if dx > 0 else "a") + ("s" if dy > 0 else "w")
-            else:
-                movement = "w" if self.game_mode == 3 else "a"
+            if enemy_target and box_target:
+                if enemy_target[1] < box_target[1] * 1.5 or enemy_target[1] < attack_range:
+                    self._human_state = self.STATE_FIGHT
+                else:
+                    self._human_state = self.STATE_LOOT
+            elif enemy_target: self._human_state = self.STATE_FIGHT
+            elif box_target:   self._human_state = self.STATE_LOOT
+            else:              self._human_state = self.STATE_SCOUT
+
+        # ── STATE: GAS! ──
+        if self._human_state == self.STATE_GAS:
+            movement = ("d" if gas_vx > 0 else "a") + ("s" if gas_vy > 0 else "w")
+            target = self._find_best_target(enemies, player_pos, "attack")
+            if target: 
+                self._handle_attack(player_pos, target[0], target[1], attack_range, super_range, brawler_info, now)
             return self._best_free_move(player_pos, movement)
 
+        # ── STATE: HEAL ──
+        if self._human_state == self.STATE_HEAL:
+            if enemies:
+                ex, ey = self.box_center(min(enemies, key=lambda b: self.dist(self.box_center(b), player_pos)))
+                movement = ("d" if player_pos[0]-ex > 0 else "a") + ("s" if player_pos[1]-ey > 0 else "w")
+                target = self._find_best_target(enemies, player_pos, "attack")
+                if target: self._handle_attack(player_pos, target[0], target[1], attack_range, super_range, brawler_info, now)
+            elif teammates and not self.is_showdown:
+                tx, ty = self.box_center(teammates[0])
+                movement = ("d" if tx-player_pos[0] > 0 else "a") + ("s" if ty-player_pos[1] > 0 else "w")
+            else:
+                movement = "s" if self.is_brawlball else random.choice(["a", "s"])
+            return self._best_free_move(player_pos, movement)
+
+        # ── STATE: SCOUT ──
         if self._human_state == self.STATE_SCOUT:
             self._tracker.reset()
-            if (not self._explore_dir
-                    or now - self._explore_time > 2.2
-                    or not self._is_path_clear(player_pos, self._explore_dir)):
-                bias = "w" if self.game_mode == 3 else random.choice(["d","wd"])
-                self._explore_dir  = random.choice([bias, bias+"a", bias+"d", "w", "a"])
+            if not self._explore_dir or now - self._explore_time > 2.0 or not self._is_path_clear(player_pos, self._explore_dir):
+                if self.is_brawlball:
+                    bias = "w"
+                elif self.is_showdown:
+                    bias = random.choice(["w", "a", "s", "d", "wa", "wd", "sa", "sd"]) 
+                else:
+                    bias = random.choice(["w", "wa", "wd"]) 
+                self._explore_dir  = bias
                 self._explore_time = now
             return self._best_free_move(player_pos, self._explore_dir)
 
+        # ── STATE: LOOT ──
         if self._human_state == self.STATE_LOOT:
             target = self._find_best_target(boxes, player_pos, "attack")
             if target is None:
                 self._human_state = self.STATE_SCOUT
-                return self._best_free_move(player_pos, "w")
+                return self._best_free_move(player_pos, self._explore_dir)
             box_pos, box_dist = target
-            if box_dist > 40:
-                dx, dy   = box_pos[0]-player_pos[0], box_pos[1]-player_pos[1]
-                movement = ("d" if dx > 0 else "a") + ("s" if dy > 0 else "w")
+            
+            if box_dist > attack_range * 0.75:
+                movement = ("d" if box_pos[0]-player_pos[0] > 0 else "a") + ("s" if box_pos[1]-player_pos[1] > 0 else "w")
             else:
-                movement = ""
-            if enemies:
-                etarget = self._find_best_target(enemies, player_pos, "attack")
-                if etarget:
-                    self._handle_attack(player_pos, etarget[0], etarget[1],
-                                        attack_range, super_range, brawler_info, now)
+                movement = "" 
+                
+            self._handle_attack(player_pos, box_pos, box_dist, attack_range, super_range, brawler_info, now)
             return self._best_free_move(player_pos, movement)
 
+        # ── STATE: FIGHT ──
         target = self._find_best_target(enemies, player_pos, "attack")
         if target is None:
             self._human_state = self.STATE_SCOUT
-            return self._best_free_move(player_pos, "w")
+            return self._best_free_move(player_pos, self._explore_dir)
 
         enemy_pos, enemy_dist = target
 
@@ -717,56 +667,33 @@ class Play(Movement):
             self._strafe_flip  = now
 
         walls_block = not self._has_los(player_pos, enemy_pos)
-        is_thrower  = brawler_info.get("ignore_walls_for_attacks", False)
-
-        dx = enemy_pos[0] - player_pos[0]
-        dy = enemy_pos[1] - player_pos[1]
+        dx, dy = enemy_pos[0] - player_pos[0], enemy_pos[1] - player_pos[1]
 
         if enemy_dist < attack_range * panic_thr:
             movement = ("d" if dx < 0 else "a") + ("s" if dy < 0 else "w")
-
-        elif walls_block and not is_thrower:
-            sf = self._strafe_sign
-            vx = dx * 0.4 + dy * sf * 1.6
-            vy = dy * 0.4 - dx * sf * 1.6
+        elif walls_block and not brawler_info.get("ignore_walls_for_attacks", False):
+            vx, vy = dx * 0.4 + dy * self._strafe_sign * 1.6, dy * 0.4 - dx * self._strafe_sign * 1.6
             movement = ("d" if vx > 0 else "a") + ("s" if vy > 0 else "w")
-
         elif enemy_dist < ideal_dist:
-            perp_x = -dy * self._strafe_sign * 0.6
-            perp_y =  dx * self._strafe_sign * 0.6
-            retreat_x = -dx + perp_x
-            retreat_y = -dy + perp_y
-            movement  = ("d" if retreat_x > 0 else "a") + ("s" if retreat_y > 0 else "w")
-
+            px, py = -dy * self._strafe_sign * 0.6, dx * self._strafe_sign * 0.6
+            movement  = ("d" if -dx + px > 0 else "a") + ("s" if -dy + py > 0 else "w")
         elif enemy_dist <= attack_range:
-            perp_x = -dy * self._strafe_sign
-            perp_y =  dx * self._strafe_sign
-            movement = ("d" if perp_x > 0 else "a") + ("s" if perp_y > 0 else "w")
-
+            movement = ("d" if -dy * self._strafe_sign > 0 else "a") + ("s" if dx * self._strafe_sign > 0 else "w")
         else:
-            push_x = dx * 0.75 + (-dy) * self._strafe_sign * 0.4
-            push_y = dy * 0.75 +   dx  * self._strafe_sign * 0.4
-            movement = ("d" if push_x > 0 else "a") + ("s" if push_y > 0 else "w")
+            px, py = dx * 0.75 - dy * self._strafe_sign * 0.4, dy * 0.75 + dx * self._strafe_sign * 0.4
+            movement = ("d" if px > 0 else "a") + ("s" if py > 0 else "w")
 
-        self._handle_attack(player_pos, enemy_pos, enemy_dist,
-                            attack_range, super_range, brawler_info, now)
-
+        self._handle_attack(player_pos, enemy_pos, enemy_dist, attack_range, super_range, brawler_info, now)
         return self._best_free_move(player_pos, movement)
 
     def _frame_hash(self, frame) -> int:
-        if frame is None:
-            return 0
-        try:
-            arr   = np.array(frame) if isinstance(frame, Image.Image) else frame
-            small = arr[::10, ::10, 0] 
-            return int(np.sum(small) % 2**31)
-        except Exception:
-            return 0
+        if frame is None: return 0
+        try: return int(np.sum((np.array(frame) if isinstance(frame, Image.Image) else frame)[::10, ::10, 0]) % 2**31)
+        except Exception: return 0
 
     @staticmethod
     def _validate(data: dict) -> Optional[dict]:
-        if "player" not in data or not data["player"]:
-            return None
+        if "player" not in data or not data["player"]: return None
         data.setdefault("enemy",    None)
         data.setdefault("teammate", [])
         data.setdefault("box",      [])
@@ -775,62 +702,46 @@ class Play(Movement):
 
     def main(self, frame, brawler: str) -> None:
         now = time.time()
-
-        with self._frame_lock:
-            self._current_frame = frame
+        with self._frame_lock: self._current_frame = frame
 
         h = self._frame_hash(frame)
-        if h == self._last_frame_hash:
-            pass
-        else:
-            self._freeze_start = now
+        if h != self._last_frame_hash: self._freeze_start = now
         self._last_frame_hash = h
-        is_frozen = (now - self._freeze_start) > 1.5
+        is_frozen = (now - self._freeze_start) > 1.2
 
-        if self.brain is None and brawler:
-            self.brain = AdaptiveBrain(brawler)
-        if self.brain:
-            self.brain.tick_ammo()
-
+        if self.brain is None and brawler: self.brain = AdaptiveBrain(brawler)
+        if self.brain: self.brain.tick_ammo()
         self._check_abilities(frame, now)
 
         with self._data_lock:
             data = dict(self._cached_data) if self._cached_data else {}
             g_state = getattr(self, "_cached_game_state", "match")
 
-        if data.get("player"):
-            self._last_det["player"] = now
-        if data.get("enemy"):
-            self._last_det["enemy"] = now
+        if data.get("player"): self._last_det["player"] = now
+        if data.get("enemy"): self._last_det["enemy"] = now
 
+        # АНТИ-АФК
         if is_frozen or not data or not data.get("player"):
             if g_state == "match":
-                if now - self._blind_dir_time > 1.8:
-                    if self.game_mode == 3:
-                        self._blind_dir = random.choice(["w","w","wa","wd"])
+                if now - self._blind_dir_time > 1.5:
+                    if self.is_brawlball:
+                        opts = ["w", "wa", "wd"]
+                    elif self.is_showdown:
+                        opts = ["w", "wa", "wd", "a", "d", "s", "sa", "sd"]
                     else:
-                        self._blind_dir = random.choice(["d","d","wd","sd"])
+                        opts = ["w", "wa", "wd", "a", "d"]
+                    self._blind_dir = random.choice(opts)
                     self._blind_dir_time = now
 
-                forced = self._blind_dir or ("w" if self.game_mode == 3 else "d")
-                if random.random() < 0.15:
-                    forced = random.choice(["w","a","s","d","wa","wd","sa","sd"])
-
-                self.do_movement(forced)
-
-                if now - self._last_attack_time > 1.2:
-                    self.attack_in_direction(forced)
+                self.do_movement(self._blind_dir)
+                if now - self._last_attack_time > 2.0:
+                    self.attack_in_direction(self._blind_dir)
                     self._last_attack_time = now
-            else:
-                self.release_all()
+            else: self.release_all()
             return
-
-        self._last_no_det_proc = now
 
         valid_data = self._validate(data)
-        if valid_data is None:
-            return
-
+        if valid_data is None: return
         valid_data["_frame"] = frame
 
         movement = self._get_movement(valid_data, brawler)
@@ -846,43 +757,10 @@ class Play(Movement):
             "hp":     self._real_hp,
             "state":  self._human_state,
         })
-        if len(self.scene_data) > 600:
-            self.scene_data.pop(0)
+        if len(self.scene_data) > 600: self.scene_data.pop(0)
 
-    def on_game_result(self, won: bool) -> None:
-        if self.brain:
-            self.brain.on_game_result(won)
+    def on_game_result(self, rank: int) -> None:
+        if self.brain: self.brain.on_game_result(rank)
 
     def generate_visualization(self, output: str = "visualization.mp4") -> None:
-        import cv2 as _cv2
-        W, H = GAME_WIDTH, GAME_HEIGHT
-        out  = _cv2.VideoWriter(output, _cv2.VideoWriter_fourcc(*"mp4v"), 10, (W, H))
-        font = _cv2.FONT_HERSHEY_SIMPLEX
-        sx, sy = W / GAME_WIDTH, H / GAME_HEIGHT
-
-        state_colors = {
-            self.STATE_SCOUT: (80,  180, 80),
-            self.STATE_FIGHT: (40,  40,  200),
-            self.STATE_LOOT:  (200, 160, 30),
-            self.STATE_HEAL:  (40,  200, 200),
-        }
-
-        for fd in self.scene_data:
-            img = np.zeros((H, W, 3), np.uint8)
-            for x1,y1,x2,y2 in fd["wall"]:
-                _cv2.rectangle(img,(int(x1*sx),int(y1*sy)),(int(x2*sx),int(y2*sy)),(90,90,90),-1)
-            for box in (fd["enemy"] or []):
-                x1,y1,x2,y2 = box
-                _cv2.rectangle(img,(int(x1*sx),int(y1*sy)),(int(x2*sx),int(y2*sy)),(0,0,220),-1)
-            for box in (fd["player"] or []):
-                x1,y1,x2,y2 = box
-                _cv2.rectangle(img,(int(x1*sx),int(y1*sy)),(int(x2*sx),int(y2*sy)),(0,200,60),-1)
-
-            state  = fd.get("state", "")
-            color  = state_colors.get(state, (200,200,200))
-            hp_txt = f"HP:{fd.get('hp',0):.0f}%  {state}  {fd.get('move','')}"
-            _cv2.putText(img, hp_txt, (12, H-14), font, 0.52, color, 1)
-            out.write(img)
-
-        out.release()
-        logger.info("Visualization saved → %s", output)
+        pass

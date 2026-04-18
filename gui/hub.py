@@ -1,5 +1,4 @@
 import sys
-
 import customtkinter as ctk
 import webbrowser
 import os
@@ -88,7 +87,6 @@ class Hub:
         ctk.set_appearance_mode("dark")
 
         # For showing tooltips in Toplevel windows
-        # For showing tooltips
         self.tooltip_window = None
         self._tooltip_after_id = None
         self._tooltip_owner = None
@@ -102,10 +100,10 @@ class Hub:
         self.app.geometry(f"{S(1000)}x{S(750)}")
         self.app.resizable(False, False)
 
-        # Hide tooltip on "global" interactions (tab switch, clicks, scroll, key press, focus loss, etc.)
+        # Hide tooltip on "global" interactions
         for seq in ("<ButtonPress>", "<MouseWheel>", "<KeyPress>", "<FocusOut>"):
             self.app.bind_all(seq, self._hide_tooltip, add="+")
-        self.app.bind("<Configure>", self._hide_tooltip, add="+")  # window move/resize
+        self.app.bind("<Configure>", self._hide_tooltip, add="+")
 
         # -----------------------------------------------------------------------------------------
         # Main TabView
@@ -162,7 +160,6 @@ class Hub:
             return False
 
     def _hide_tooltip(self, _event=None):
-        # cancel delayed show if pending
         if self._tooltip_after_id is not None:
             try:
                 self.app.after_cancel(self._tooltip_after_id)
@@ -170,7 +167,6 @@ class Hub:
                 pass
             self._tooltip_after_id = None
 
-        # destroy current tooltip window
         if self.tooltip_window is not None:
             try:
                 self.tooltip_window.destroy()
@@ -182,22 +178,12 @@ class Hub:
         self._tooltip_text = ""
 
     def attach_tooltip(self, widget, text, delay_ms: int = 250):
-        """
-        Robust tooltip:
-        - shows after delay
-        - hides on Leave, Unmap (tab switch), Destroy, clicks/scroll/keys (via global binds)
-        - prevents stuck tooltips when switching tabs
-        """
-
         def schedule_show(event=None):
-            # reset any existing tooltip
             self._hide_tooltip()
-
             self._tooltip_owner = widget
             self._tooltip_text = text
 
             def do_show():
-                # widget may have disappeared / tab switched
                 if (self._tooltip_owner is None
                         or not self._tooltip_owner.winfo_exists()
                         or not self._tooltip_owner.winfo_viewable()
@@ -205,12 +191,10 @@ class Hub:
                     self._hide_tooltip()
                     return
 
-                # create tooltip
                 self.tooltip_window = ctk.CTkToplevel(self.app)
                 self.tooltip_window.overrideredirect(True)
                 self.tooltip_window.attributes("-topmost", True)
 
-                # position near cursor
                 px = self.app.winfo_pointerx()
                 py = self.app.winfo_pointery()
                 self.tooltip_window.geometry(f"+{px + 12}+{py + 12}")
@@ -225,7 +209,6 @@ class Hub:
                 )
                 label.pack(padx=S(6), pady=S(4))
 
-                # if mouse enters tooltip itself, hide (avoids "stuck" hovering on tooltip)
                 self.tooltip_window.bind("<Enter>", self._hide_tooltip)
                 self.tooltip_window.bind("<Leave>", self._hide_tooltip)
 
@@ -234,12 +217,11 @@ class Hub:
         def on_leave(_event=None):
             self._hide_tooltip()
 
-        # Bindings
         widget.bind("<Enter>", schedule_show, add="+")
         widget.bind("<Leave>", on_leave, add="+")
-        widget.bind("<Unmap>", on_leave, add="+")  # IMPORTANT: tab switching / frame hidden
-        widget.bind("<Destroy>", on_leave, add="+")  # safety
-        widget.bind("<ButtonPress>", on_leave, add="+")  # click on the widget -> hide
+        widget.bind("<Unmap>", on_leave, add="+")
+        widget.bind("<Destroy>", on_leave, add="+")
+        widget.bind("<ButtonPress>", on_leave, add="+")
 
     # ---------------------------------------------------------------------------------------------
     #  Overview Tab
@@ -253,7 +235,7 @@ class Hub:
         row_ = 0
 
         # -----------------------------------------------------------------
-        # 1) Warnings at the top (bigger, red), if any
+        # 1) Warnings at the top
         # -----------------------------------------------------------------
         w_list = []
         if not self.correct_zoom:
@@ -288,28 +270,27 @@ class Hub:
         label_type.pack(side="left", padx=S(15))
 
         def set_gamemode_type(t):
-            """Only change the local var & refresh everything so frames swap."""
             self.gamemode_type_var.set(t)
             self._refresh_gamemode_buttons()
 
         self.btn_type_vertical = ctk.CTkButton(
             orientation_frame,
-            text="Vertical",
+            text="Vertical (3v3 / Solo)",
             command=lambda: set_gamemode_type(3),
             font=("Arial", S(16), "bold"),
             corner_radius=S(6),
-            width=S(120),
+            width=S(180),
             height=S(40)
         )
         self.btn_type_vertical.pack(side="left", padx=S(10))
 
         self.btn_type_horizontal = ctk.CTkButton(
             orientation_frame,
-            text="Horizontal",
-            command=lambda: set_gamemode_type(5),
+            text="Horizontal (Trio / 5v5)",
+            command=lambda: set_gamemode_type(5), # Trio is horizontal
             font=("Arial", S(16), "bold"),
             corner_radius=S(6),
-            width=S(120),
+            width=S(180),
             height=S(40)
         )
         self.btn_type_horizontal.pack(side="left", padx=S(10))
@@ -332,12 +313,9 @@ class Hub:
         self.gamemode_var = tk.StringVar(value=self.bot_config["gamemode"])
 
         def create_gamemode_button(parent, gm_value, text_display, disabled=False, orientation=3):
-            """Creates a rectangular toggle button for a gamemode."""
-
             def on_click():
                 if disabled:
                     return
-                # Set orientation + gamemode in config
                 self.bot_config["gamemode_type"] = orientation
                 self.bot_config["gamemode"] = gm_value
                 save_dict_as_toml(self.bot_config, self.bot_config_path)
@@ -363,17 +341,20 @@ class Hub:
             self.gm3_frame, "brawlball", "Brawlball", orientation=3
         )
         self.rb_showdown_3 = create_gamemode_button(
-            self.gm3_frame, "showdown", "Showdown (Disabled)", disabled=True, orientation=3
+            self.gm3_frame, "showdown", "Solo Showdown", orientation=3
         )
         self.rb_other_3 = create_gamemode_button(
-            self.gm3_frame, "other", "Other", orientation=3
+            self.gm3_frame, "other", "Other 3v3", orientation=3
         )
 
         self.rb_brawlball_3.grid(row=0, column=0, padx=S(10), pady=S(5))
         self.rb_showdown_3.grid(row=0, column=1, padx=S(10), pady=S(5))
         self.rb_other_3.grid(row=0, column=2, padx=S(10), pady=S(5))
 
-        # For type=5 (horizontal)
+        # For type=5 (horizontal) - ADDED TRIO SD
+        self.rb_trio_sd_5 = create_gamemode_button(
+            self.gm5_frame, "trio_sd", "Trio Showdown", orientation=5
+        )
         self.rb_basketbrawl_5 = create_gamemode_button(
             self.gm5_frame, "basketbrawl", "Basket Brawl", orientation=5
         )
@@ -381,11 +362,11 @@ class Hub:
             self.gm5_frame, "brawlball_5v5", "Brawlball 5v5", orientation=5
         )
 
-        self.rb_basketbrawl_5.grid(row=0, column=0, padx=S(10), pady=S(5))
-        self.rb_bb5v5_5.grid(row=0, column=1, padx=S(10), pady=S(5))
+        self.rb_trio_sd_5.grid(row=0, column=0, padx=S(10), pady=S(5))
+        self.rb_basketbrawl_5.grid(row=0, column=1, padx=S(10), pady=S(5))
+        self.rb_bb5v5_5.grid(row=0, column=2, padx=S(10), pady=S(5))
 
         def refresh_gm_buttons():
-            """Refresh button colors to highlight the currently selected gamemode."""
             gm_now = self.gamemode_var.get()
 
             def set_button_color(btn, val):
@@ -400,11 +381,11 @@ class Hub:
             set_button_color(self.rb_other_3, "other")
 
             # For horizontal set
+            set_button_color(self.rb_trio_sd_5, "trio_sd")
             set_button_color(self.rb_basketbrawl_5, "basketbrawl")
             set_button_color(self.rb_bb5v5_5, "brawlball_5v5")
 
         def refresh_orientation_buttons():
-            """Refresh the orientation buttons' color based on self.gamemode_type_var."""
             t = self.gamemode_type_var.get()
             if t == 3:
                 self.btn_type_vertical.configure(fg_color="#AA2A2A", hover_color="#BB3A3A")
@@ -416,7 +397,6 @@ class Hub:
         self._refresh_orientation_buttons = refresh_orientation_buttons
 
         def _refresh_gm_frames():
-            """Show/hide frames depending on orientation."""
             self.gm3_frame.pack_forget()
             self.gm5_frame.pack_forget()
 
@@ -436,7 +416,7 @@ class Hub:
         row_ += 1
 
         # -----------------------------------------------------------------
-        # 4) Emulator Selection (3 rectangular buttons)
+        # 4) Emulator Selection
         # -----------------------------------------------------------------
         emulator_label = ctk.CTkLabel(container, text="Select Emulator:", font=("Arial", S(20), "bold"))
         emulator_label.grid(row=row_, column=0, columnspan=2, pady=S(10))
@@ -446,25 +426,17 @@ class Hub:
         self.emulator_frame.grid(row=row_, column=0, columnspan=2, pady=S(10))
         row_ += 1
 
-        self.emu_var = tk.StringVar(value=self.general_config["current_emulator"])  # default
+        self.emu_var = tk.StringVar(value=self.general_config["current_emulator"])
 
         def handle_emulator_choice(choice):
             self.emu_var.set(choice)
-            if choice == "BlueStacks":
-                self.general_config["current_emulator"] = "BlueStacks"
-            elif choice == "LDPlayer":
-                self.general_config["current_emulator"] = "LDPlayer"
-            elif choice == "MEmu":
-                self.general_config["current_emulator"] = "MEmu"
-            else:
-                self.general_config["current_emulator"] = "Others"
+            self.general_config["current_emulator"] = choice
             save_dict_as_toml(self.general_config, self.general_config_path)
             refresh_emu_buttons()
 
         def create_emu_button(parent, text_display):
             def on_click():
                 handle_emulator_choice(text_display)
-
             btn = ctk.CTkButton(
                 parent,
                 text=text_display,
@@ -488,7 +460,6 @@ class Hub:
 
         def refresh_emu_buttons():
             curr_emu = self.emu_var.get()
-
             def color(btn, val):
                 if val == curr_emu:
                     btn.configure(fg_color="#AA2A2A", hover_color="#BB3A3A")
@@ -501,10 +472,6 @@ class Hub:
             color(self.btn_others, "Others")
 
         refresh_emu_buttons()
-
-        # -----------------------------------------------------------------
-        # Some spacing
-        # -----------------------------------------------------------------
         row_ += 1
 
         # -----------------------------------------------------------------
@@ -524,7 +491,7 @@ class Hub:
         row_ += 1
 
         # -----------------------------------------------------------------
-        # 6) "Pyla is free..." label at bottom, link in blue only
+        # 6) Footer
         # -----------------------------------------------------------------
         disclaim_frame = ctk.CTkFrame(container, fg_color="transparent")
         disclaim_frame.grid(row=row_, column=0, columnspan=2, pady=S(10))
@@ -538,7 +505,6 @@ class Hub:
         disclaim_label.pack(side="left")
 
         discord_link = get_discord_link()
-
         def open_discord_link():
             webbrowser.open(discord_link)
 
@@ -551,7 +517,6 @@ class Hub:
         )
         link_label.pack(side="left")
         link_label.bind("<Button-1>", lambda e: open_discord_link())
-
         row_ += 1
 
         ad_frame = ctk.CTkFrame(container, fg_color="transparent")
@@ -565,13 +530,12 @@ class Hub:
         )
         ad_label.pack(side="left")
 
-        shown_patreon_link = "www.patreon.com/c/pyla"
         patreon_link = "https://www.patreon.com/pyla/membership"
         def open_patreon_link():
             webbrowser.open(patreon_link)
         patreon_label = ctk.CTkLabel(
             ad_frame,
-            text=shown_patreon_link,
+            text="www.patreon.com/c/pyla",
             font=("Arial", S(18), "bold"),
             text_color="#3498db",
             cursor="hand2"
@@ -590,24 +554,15 @@ class Hub:
         container = ctk.CTkFrame(frame, fg_color="transparent")
         container.pack(expand=True, fill="both")
 
-        # Extra space to avoid tooltip clipping
         container.grid_rowconfigure(0, minsize=S(10))
 
         row_idx = 0
 
-        # -----------------------------------------------------------------------------------------
-        # Helper to create labeled entries in either bot_config or general_config
-        # -----------------------------------------------------------------------------------------
-        def create_labeled_entry(label_text,
-                                 config_key,
-                                 convert_func,
-                                 use_general_config=False,
-                                 tooltip_text=None):
+        def create_labeled_entry(label_text, config_key, convert_func, use_general_config=False, tooltip_text=None):
             nonlocal row_idx
             lbl = ctk.CTkLabel(container, text=label_text, font=("Arial", S(18)))
             lbl.grid(row=row_idx, column=0, sticky="e", padx=S(20), pady=S(10))
 
-            # Decide which dictionary to read/write
             if use_general_config:
                 current_config = self.general_config
                 current_path = self.general_config_path
@@ -628,9 +583,7 @@ class Hub:
                 except ValueError:
                     var_str.set(str(current_config[config_key]))
 
-            entry = ctk.CTkEntry(
-                container, textvariable=var_str, width=S(120), font=("Arial", S(16))
-            )
+            entry = ctk.CTkEntry(container, textvariable=var_str, width=S(120), font=("Arial", S(16)))
             entry.grid(row=row_idx, column=1, sticky="w", padx=S(20), pady=S(10))
             entry.bind("<FocusOut>", on_save)
             entry.bind("<Return>", on_save)
@@ -640,56 +593,14 @@ class Hub:
 
             row_idx += 1
 
+        create_labeled_entry("Minimum Movement Delay:", "minimum_movement_delay", float, False, "How long (in seconds) the bot must maintain a movement before changing it.")
+        create_labeled_entry("Wall Detection Confidence:", "wall_detection_confidence", float, False, "On a scale between 0 and 1, how sure must the bot be to detect a wall.")
+        create_labeled_entry("Player/Enemy Detection Confidence:", "entity_detection_confidence", float, False, "On a scale between 0 and 1, how sure must the bot be to detect the player/enemies/allies.")
+        create_labeled_entry("Unstuck Movement Delay:", "unstuck_movement_delay", float, False, "How long (in seconds) can the bot maintain a movement before trying to unstuck itself.")
+        create_labeled_entry("Unstucking Duration:", "unstuck_movement_hold_time", float, False, "For how long (in seconds) will the bot try to go in a different position.")
 
-        # 6) Minimum Movement Delay (bot_config)
-        create_labeled_entry(
-            label_text="Minimum Movement Delay:",
-            config_key="minimum_movement_delay",
-            convert_func=float,
-            use_general_config=False,
-            tooltip_text="How long (in seconds) the bot must maintain a movement before changing it."
-        )
-
-        # 9) Wall Detection Confidence (bot_config)
-        create_labeled_entry(
-            label_text="Wall Detection Confidence:",
-            config_key="wall_detection_confidence",
-            convert_func=float,
-            use_general_config=False,
-            tooltip_text="On a scale between 0 and 1, how sure must the bot be to detect a wall  (lower means it can detect more things but increases false detections and mistakes)."
-        )
-
-        # 9) Wall Detection Confidence (bot_config)
-        create_labeled_entry(
-            label_text="Player/Enemy Detection Confidence:",
-            config_key="entity_detection_confidence",
-            convert_func=float,
-            use_general_config=False,
-            tooltip_text="On a scale between 0 and 1, how sure must the bot be to detect the player/enemies/allies. (lower means it can detect more things but increases false detections and mistakes)."
-        )
-
-        # 7) Unstuck Movement Delay (bot_config)
-        create_labeled_entry(
-            label_text="Unstuck Movement Delay:",
-            config_key="unstuck_movement_delay",
-            convert_func=float,
-            use_general_config=False,
-            tooltip_text="How long (in seconds) can the bot maintain a movement before trying to unstuck itself."
-        )
-
-        # 8) Unstucking Duration (bot_config)
-        create_labeled_entry(
-            label_text="Unstucking Duration:",
-            config_key="unstuck_movement_hold_time",
-            convert_func=float,
-            use_general_config=False,
-            tooltip_text="For how long (in seconds) will the bot try to go in a different position to unstuck itself before going back to normal."
-        )
-
-        # 4) CPU/GPU (store in general_config)
         lbl_gpu = ctk.CTkLabel(container, text="Use GPU (CPU/Auto):", font=("Arial", S(18)))
         lbl_gpu.grid(row=row_idx, column=0, sticky="e", padx=S(20), pady=S(10))
-
         gpu_values = ["cpu", "auto"]
         gpu_var = tk.StringVar(value=self.general_config["cpu_or_gpu"])
 
@@ -698,86 +609,33 @@ class Hub:
             save_dict_as_toml(self.general_config, self.general_config_path)
 
         gpu_menu = ctk.CTkOptionMenu(
-            container,
-            values=gpu_values,
-            command=on_gpu_change,
-            variable=gpu_var,
-            font=("Arial", S(16)),
-            fg_color="#AA2A2A",
-            button_color="#AA2A2A",
-            button_hover_color="#BB3A3A",
-            width=S(100),
-            height=S(35)
+            container, values=gpu_values, command=on_gpu_change, variable=gpu_var,
+            font=("Arial", S(16)), fg_color="#AA2A2A", button_color="#AA2A2A",
+            button_hover_color="#BB3A3A", width=S(100), height=S(35)
         )
         gpu_menu.grid(row=row_idx, column=1, padx=S(20), pady=S(10), sticky="w")
         row_idx += 1
 
         lbl_long_press = ctk.CTkLabel(container, text="Longpress star_drop:", font=("Arial", S(18)))
         lbl_long_press.grid(row=row_idx, column=0, sticky="e", padx=S(20), pady=S(10))
-        long_press_var = tk.BooleanVar(
-            value=(str(self.general_config["long_press_star_drop"]).lower() in ["yes", "true"])
-        )
+        long_press_var = tk.BooleanVar(value=(str(self.general_config["long_press_star_drop"]).lower() in ["yes", "true"]))
 
         def toggle_long_press_detection():
             self.general_config["long_press_star_drop"] = "yes" if long_press_var.get() else "no"
             save_dict_as_toml(self.general_config, self.general_config_path)
 
         long_press_cb = ctk.CTkCheckBox(
-            container,
-            text="",
-            variable=long_press_var,
-            command=toggle_long_press_detection,
-            fg_color="#AA2A2A",
-            hover_color="#BB3A3A",
-            width=S(30),
-            height=S(30)
+            container, text="", variable=long_press_var, command=toggle_long_press_detection,
+            fg_color="#AA2A2A", hover_color="#BB3A3A", width=S(30), height=S(30)
         )
         long_press_cb.grid(row=row_idx, column=1, sticky="w", padx=S(20), pady=S(10))
         row_idx += 1
 
-
-        create_labeled_entry(
-            label_text="Super Detection Pixel Treshold:",
-            config_key="super_pixels_minimum",
-            convert_func=float,
-            use_general_config=False,
-            tooltip_text='Amount of "yellow" pixels the bot must detect to consider the super is ready.'
-        )
-
-        create_labeled_entry(
-            label_text="Trophies Multiplier:",
-            config_key="trophies_multiplier",
-            convert_func=int,
-            use_general_config=True,
-            tooltip_text="Enter the multiplier for trophies gained per match (for example : 2 for brawl arena)."
-        )
-
-        # 10) Gadget Detection Pixel Threshold (bot_config)
-        create_labeled_entry(
-            label_text="Gadget Detection Pixel Treshold:",
-            config_key="gadget_pixels_minimum",
-            convert_func=float,
-            use_general_config=False,
-            tooltip_text='Amount of "green" pixels the bot must detect to consider a gadget is ready.'
-        )
-
-        # 11) Hypercharge Detection Pixel Threshold (bot_config)
-        create_labeled_entry(
-            label_text="Hypercharge Detection Pixel Treshold:",
-            config_key="hypercharge_pixels_minimum",
-            convert_func=float,
-            use_general_config=False,
-            tooltip_text='Amount of "purple" pixels the bot must detect to consider a hypercharge is ready.'
-        )
-
-        # 1) Max IPS (store in general_config)
-        create_labeled_entry(
-            label_text="Max IPS:",
-            config_key="max_ips",
-            convert_func=lambda s: s if s.lower() == "auto" else int(s),
-            use_general_config=True,
-            tooltip_text="Maximum Images per second the bot processes. 'auto' means no limit."
-        )
+        create_labeled_entry("Super Detection Pixel Treshold:", "super_pixels_minimum", float, False, 'Amount of "yellow" pixels the bot must detect.')
+        create_labeled_entry("Trophies Multiplier:", "trophies_multiplier", int, True, "Enter the multiplier for trophies gained per match.")
+        create_labeled_entry("Gadget Detection Pixel Treshold:", "gadget_pixels_minimum", float, False, 'Amount of "green" pixels the bot must detect.')
+        create_labeled_entry("Hypercharge Detection Pixel Treshold:", "hypercharge_pixels_minimum", float, False, 'Amount of "purple" pixels the bot must detect.')
+        create_labeled_entry("Max IPS:", "max_ips", lambda s: s if s.lower() == "auto" else int(s), True, "Maximum Images per second the bot processes.")
 
         container.grid_columnconfigure(0, weight=1)
         container.grid_columnconfigure(1, weight=1)
@@ -789,48 +647,42 @@ class Hub:
         frame = self.tab_timers
         container = ctk.CTkFrame(frame, fg_color="transparent")
         container.pack(expand=True, fill="both")
-
-        container.grid_rowconfigure(0, minsize=S(70))  # extra top space for tooltips
+        container.grid_rowconfigure(0, minsize=S(70))
 
         row_idx = 1
 
         def create_timer_setting(param_name, label_text, tooltip_text=None, disabled=False):
             nonlocal row_idx
-
             lbl = ctk.CTkLabel(container, text=label_text, font=("Arial", S(18)))
             lbl.grid(row=row_idx, column=0, padx=S(20), pady=S(10), sticky="e")
 
-            # Frame to hold slider & entry side by side
             slider_entry_frame = ctk.CTkFrame(container, fg_color="transparent")
             slider_entry_frame.grid(row=row_idx, column=1, padx=S(20), pady=S(10), sticky="w")
 
             val_var = tk.StringVar(value=str(self.time_tresholds[param_name]))
 
-            # The slider
+            def on_slider_change(value, v_var, p_name):
+                if disabled: return
+                v = float(value)
+                v_var.set(f"{v:.2f}")
+                self.time_tresholds[p_name] = v
+                save_dict_as_toml(self.time_tresholds, self.time_tresholds_path)
+
             sld = ctk.CTkSlider(
-                slider_entry_frame,
-                from_=0.1,
-                to=10,
-                number_of_steps=99,
-                width=S(200),
+                slider_entry_frame, from_=0.1, to=10, number_of_steps=99, width=S(200),
                 command=lambda v: on_slider_change(v, val_var, param_name),
                 state=("disabled" if disabled else "normal")
             )
             sld.pack(side="left", padx=S(5))
 
-            # The text entry
             entry = ctk.CTkEntry(
-                slider_entry_frame,
-                textvariable=val_var,
-                width=S(80),
-                font=("Arial", S(16)),
+                slider_entry_frame, textvariable=val_var, width=S(80), font=("Arial", S(16)),
                 state=("disabled" if disabled else "normal")
             )
             entry.pack(side="left", padx=S(10))
 
             def on_save(_):
-                if disabled:
-                    return
+                if disabled: return
                 new_val_str = val_var.get().strip()
                 if new_val_str == "":
                     val_var.set(str(self.time_tresholds[param_name]))
@@ -839,71 +691,30 @@ class Hub:
                     val = float(new_val_str)
                     self.time_tresholds[param_name] = val
                     save_dict_as_toml(self.time_tresholds, self.time_tresholds_path)
-                    # Update slider visually
-                    if val < 0.1:
-                        sld.set(0.1)
-                    elif val > 10:
-                        sld.set(10)
-                    else:
-                        sld.set(val)
+                    sld.set(max(0.1, min(val, 10)))
                 except ValueError:
                     val_var.set(str(self.time_tresholds[param_name]))
 
             entry.bind("<FocusOut>", on_save)
             entry.bind("<Return>", on_save)
 
-            def on_slider_change(value, v_var, p_name):
-                if disabled:
-                    return
-                v = float(value)
-                # update entry text
-                v_var.set(f"{v:.2f}")
-                self.time_tresholds[p_name] = v
-                save_dict_as_toml(self.time_tresholds, self.time_tresholds_path)
-
-            # Initialize slider
             try:
                 init_val = float(self.time_tresholds[param_name])
-                if init_val < 0.1:
-                    init_val = 0.1
-                elif init_val > 10:
-                    init_val = 10
-                sld.set(init_val)
+                sld.set(max(0.1, min(init_val, 10)))
             except:
                 sld.set(1.0)
 
-            # NOTE: We removed "self.attach_tooltip(lbl, tooltip_text)" so the label has no tooltip.
             if tooltip_text and not disabled:
                 self.attach_tooltip(sld, tooltip_text)
                 self.attach_tooltip(entry, tooltip_text)
 
             row_idx += 1
 
-        create_timer_setting(
-            param_name="super",
-            label_text="Super Delay:",
-            tooltip_text="How often (in seconds) the bot checks if super is ready."
-        )
-        create_timer_setting(
-            param_name="hypercharge",
-            label_text="Hypercharge Delay:",
-            tooltip_text="How often (in seconds) the bot checks if hypercharge is ready."
-        )
-        create_timer_setting(
-            param_name="gadget",
-            label_text="Gadget Check Delay:",
-            tooltip_text="How often (in seconds) the bot checks if gadget is ready."
-        )
-        create_timer_setting(
-            param_name="wall_detection",
-            label_text="Wall Detection:",
-            tooltip_text="How often (in seconds) the bot detects the walls around it."
-        )
-        create_timer_setting(
-            param_name="no_detection_proceed",
-            label_text="No detections proceed Delay:",
-            tooltip_text="How often (in seconds) does the bot press Q to proceed when it doesn't find the player but doesn't know in what state it is."
-        )
+        create_timer_setting("super", "Super Delay:", "How often (in seconds) the bot checks if super is ready.")
+        create_timer_setting("hypercharge", "Hypercharge Delay:", "How often (in seconds) the bot checks if hypercharge is ready.")
+        create_timer_setting("gadget", "Gadget Check Delay:", "How often (in seconds) the bot checks if gadget is ready.")
+        create_timer_setting("wall_detection", "Wall Detection:", "How often (in seconds) the bot detects the walls around it.")
+        create_timer_setting("no_detection_proceed", "No detections proceed Delay:", "How often (in seconds) does the bot press Q to proceed when it doesn't find the player.")
 
         container.grid_columnconfigure(0, weight=1)
         container.grid_columnconfigure(1, weight=1)
@@ -913,17 +724,14 @@ class Hub:
     # ---------------------------------------------------------------------------------------------
     def _init_history_tab(self):
         frame = self.tab_history
-
-        scroll_frame = ctk.CTkScrollableFrame(
-            frame, width=S(900), height=S(600), fg_color="transparent", corner_radius=S(10)
-        )
+        scroll_frame = ctk.CTkScrollableFrame(frame, width=S(900), height=S(600), fg_color="transparent", corner_radius=S(10))
         scroll_frame.pack(fill="both", expand=True, padx=S(10), pady=S(10))
 
         max_cols = 4
         row_idx = 0
         col_idx = 0
+        icon_size = S(100) 
 
-        icon_size = S(100)  # bigger icons
         for brawler, stats in self.match_history.items():
             if brawler == "total":
                 continue
@@ -941,50 +749,23 @@ class Hub:
                 wr = round(100 * stats["victory"] / total_games, 1)
                 lr = round(100 * stats["defeat"] / total_games, 1)
 
-            cell_frame = ctk.CTkFrame(
-                scroll_frame,
-                width=S(200),
-                height=S(220),
-                corner_radius=S(8)
-            )
+            cell_frame = ctk.CTkFrame(scroll_frame, width=S(200), height=S(220), corner_radius=S(8))
             cell_frame.grid(row=row_idx, column=col_idx, padx=S(15), pady=S(15))
 
-            # Icon
             if icon_img:
                 icon_label = ctk.CTkLabel(cell_frame, image=icon_img, text="")
                 icon_label.pack(pady=S(5))
 
-            # Brawler name & total games
-            text_label = ctk.CTkLabel(
-                cell_frame,
-                text=f"{brawler}\n{total_games} games",
-                font=("Arial", S(16), "bold")
-            )
+            text_label = ctk.CTkLabel(cell_frame, text=f"{brawler}\n{total_games} games", font=("Arial", S(16), "bold"))
             text_label.pack()
 
             stats_frame = ctk.CTkFrame(cell_frame, fg_color="transparent")
             stats_frame.pack(pady=S(5))
 
-            # Win in green
-            color_win = "#2ecc71"
-
-            # Loss in red
-            color_loss = "#e74c3c"
-
-            lbl_win = ctk.CTkLabel(
-                stats_frame,
-                text=f"{wr}%",
-                font=("Arial", S(14), "bold"),
-                text_color=color_win
-            )
+            lbl_win = ctk.CTkLabel(stats_frame, text=f"{wr}%", font=("Arial", S(14), "bold"), text_color="#2ecc71")
             lbl_win.pack(side="left", padx=S(5))
 
-            lbl_loss = ctk.CTkLabel(
-                stats_frame,
-                text=f"{lr}%",
-                font=("Arial", S(14), "bold"),
-                text_color=color_loss
-            )
+            lbl_loss = ctk.CTkLabel(stats_frame, text=f"{lr}%", font=("Arial", S(14), "bold"), text_color="#e74c3c")
             lbl_loss.pack(side="left", padx=S(5))
 
             col_idx += 1
@@ -993,7 +774,7 @@ class Hub:
                 row_idx += 1
 
     # ---------------------------------------------------------------------------------------------
-    #  On Start => close window + callback
+    #  On Start
     # ---------------------------------------------------------------------------------------------
     def _on_start(self):
         o = sys.stdout
@@ -1033,4 +814,3 @@ class Hub:
         sys.stderr = e
         if callable(self.on_close_callback):
             self.on_close_callback()
-
