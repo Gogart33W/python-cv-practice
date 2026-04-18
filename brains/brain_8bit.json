@@ -1,7 +1,7 @@
 {
-    "kiting_multiplier": 0.72,
+    "kiting_multiplier": 0.7,
     "prediction_lead": 0.85,
     "strafe_interval": 0.6,
     "panic_threshold": 0.6,
-    "lessons_learned": 22
+    "lessons_learned": 38
 }

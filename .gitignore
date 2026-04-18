@@ -1,16 +1,16 @@
-# Віртуальне середовище
-venv/
-env/
-ENV/
-
-# Кеш Python
+# Системні папки Python
 __pycache__/
 *.py[cod]
 *$py.class
+venv/
+.venv/
 
-# Логи та системні файли
-*.log
-.DS_Store
+# Папки збірки
+build/
+dist/
+*.egg-info/
 
-# (Опціонально) Якщо моделі дуже важкі, їх теж не заливають, 
-# але якщо вони до 100мб, можеш поки залишити
+# Тимчасові дані та конфіги з особистими даними
+latest_brawler_data.json
+cfg/match_history.toml
+cfg/login.toml

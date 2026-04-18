@@ -178,6 +178,7 @@ class StageManager:
         if detection:
             x, y = detection
             self.window_controller.click(x=x + 50, y=y)
+            
     def click_star_drop(self):
         if self.long_press_star_drop == "yes":
             self.window_controller.press_key("Q",10)
@@ -195,6 +196,12 @@ class StageManager:
             if not found_game_result and time.time() - self.time_since_last_stat_change > 10:
 
                 found_game_result = self.Trophy_observer.find_game_result(screenshot, current_brawler=self.brawlers_pick_data[0]['brawler'])
+                
+                # --- Додана логіка ---
+                if found_game_result:
+                    self.Play.on_game_result(found_game_result == "victory")
+                # ---------------------
+                
                 self.time_since_last_stat_change = time.time()
                 values = {
                     "trophies": self.Trophy_observer.current_trophies,
@@ -259,4 +266,3 @@ class StageManager:
             self.states[state](data)
             return
         self.states[state]()
-
